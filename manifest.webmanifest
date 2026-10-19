@@ -1,0 +1,26 @@
+{
+ "name": "Recuentos de Implantación",
+ "short_name": "Recuentos",
+ "description": "Distancias entre plantas a campo, con dictado y sin señal",
+ "lang": "es-AR",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#F3F4EF",
+ "theme_color": "#F2C21B",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
