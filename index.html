@@ -155,6 +155,7 @@ tfoot td{font-weight:800;border-bottom:0}
 .card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
 .kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--tape);transition:width .2s}
 .banner{background:var(--warn-bg);color:var(--warn);border-radius:var(--r);padding:12px 14px;font-size:14px;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -173,6 +174,10 @@ tfoot td{font-weight:800;border-bottom:0}
   <div class="banner" id="installBanner" hidden>
     <span id="installTxt">Instalá la app en el celular para usarla sin señal.</span>
     <div class="row" style="margin-top:8px"><button class="btn primary" id="btnInstall" hidden>Instalar app</button></div>
+  </div>
+  <div class="banner" id="vozBanner" hidden>
+    Para dictar sin señal, descargá el dictado una vez con wifi (40 MB).
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="btnVozHome">Descargar dictado</button></div>
   </div>
   <button class="btn primary block" id="btnNew" style="min-height:58px;font-size:18px">+ Nueva evaluación</button>
   <h3>Evaluaciones en este celular</h3>
@@ -264,8 +269,10 @@ tfoot td{font-weight:800;border-bottom:0}
   </div>
   <div class="card">
     <b>Dictado sin señal</b>
-    <p class="small" id="dictInfo">La forma más segura: tocá el cuadro de distancias y usá el micrófono del teclado. En Android, en Gboard: Configuración › Dictado por voz › Reconocimiento de voz sin conexión › descargar Español. En iPhone activá Dictado en Configuración › General › Teclado. Probalo en modo avión antes de salir.</p>
-    <button class="btn" id="btnPrepDict" hidden>Preparar dictado del navegador sin señal</button>
+    <p class="small" id="vozInfo"></p>
+    <div class="bar" id="vozBar" hidden><i id="vozBarI"></i></div>
+    <button class="btn primary" id="btnVoz">Descargar dictado sin señal (40 MB)</button>
+    <p class="small muted">Se descarga una sola vez, con wifi. Después el botón “Dictar” funciona con o sin señal, en Android y en iPhone, y solo reconoce números.</p>
   </div>
   <div class="card">
     <b>Lista de lotes</b>
@@ -287,9 +294,11 @@ tfoot td{font-weight:800;border-bottom:0}
 
 <datalist id="dlEF"></datalist><datalist id="dlAnt"></datalist><datalist id="dlContr"></datalist><datalist id="dlSemb"></datalist>
 
+<script src="fflate.js"></script>
+<script src="vosk.js"></script>
 <script>
 "use strict";
-const VERSION = "1.0.1";
+const VERSION = "1.1.0";
 const DATA = {"lotes": [["Lau_2s", "AGBA", "Launania", "Maiz tardio", "Soja", null, 4.7], ["AL_12", "AL", "Auca_Loo", "Maiz", "Soja", 52, 6], ["AL_1bN", "AL", "Auca_Loo", "Maiz tardio", "Soja", null, null], ["AL_2a", "AL", "Auca_Loo", "Maiz", "Maiz 2da", 52, 6], ["AL_4", "AL", "Auca_Loo", "Maiz tardio", "Pastura", null, null], ["AL_6", "AL", "Auca_Loo", "Maiz", "Maiz tardio", 52, 6], ["AL_7", "AL", "Auca_Loo", "Maiz", "Maiz Silo", 52, 6], ["E_1", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_3-4-5", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_9", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["DM_1-2-3-4", "C4", "Don_Manuel", "Maiz tardio", "Maiz Silo 2da", 52.5, 4], ["Fossa_1", "C4", "Fossati", "Maiz", "Soja 2da", 52.5, 4.5], ["Fossa_2", "C4", "Fossati", "Maiz tardio", "Natural", null, 6], ["LCh_02", "C4", "Los_Chañares", "Maiz", "Soja", 52.5, 6.8], ["LCh_14", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_15", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_17b", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_18", "C4", "Los_Chañares", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_20", "C4", "Los_Chañares", "Maiz", "Pastura", 52.5, 5.5], ["SJo_18a", "C4", "San_José_RGB", "Maiz tardio", "Maiz Silo 2da", 52.5, 6], ["SJo_6", "C4", "San_José_RGB", "Maiz", "Maiz Silo 2da", 52.5, 4.5], ["Sjo_8b", "C4", "San_José_RGB", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["SMta_04_s", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 5], ["SMta_07", "C4", "Santa_Margarita", "Maiz tardio", "Soja 2da", null, 4.5], ["SMta_15", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_17", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_1_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_2-3_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_20", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", null, 6.8], ["SMta_23n", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", 52.5, 5], ["LCol_2", "Doña Julia", "La_Colonia", "Maiz tardio", "Soja 2da", null, null], ["LCol_4", "Doña Julia", "La_Colonia", "Maiz", "Soja 2da", null, null], ["LD_9", "Doña Julia", "La_Delfina", "Maiz tardio", "Soja 2da", null, null], ["LT_1-2-3", "Doña Julia", "La_Travesia", "Maiz", "Soja 2da", null, null], ["LAl_2-3", "Doña Julia", "Los_Alamos", "Maiz", "Soja 2da", null, null], ["SF_1", "Doña Julia", "San_Faustino", "Maiz", "Soja 2da", null, null], ["SF_2", "Doña Julia", "San_Faustino", "Maiz tardio", "Soja", null, null], ["SP_3", "Doña Julia", "San_Pedro", "Maiz tardio", "Soja", null, null], ["LMgd_4", "ECSRL", "La_Magdalena", "Maiz tardio", "Soja 2da", null, 4.5], ["SPe_1", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_2", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_5b", "ECSRL", "San_Pedro", "Maiz tardio", "Soja", null, 4], ["DA_11", "ENT", "Don_Angel", "Maiz", "Soja", 70, 4.5], ["DA_2", "ENT", "Don_Angel", "Maiz tardio", "Soja 2da", null, null], ["DA_5", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["DA_7", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["LS_4", "ENT", "La_Sofía", "Maiz tardio", "Soja", 70, 6.8], ["LS_6", "ENT", "La_Sofía", "Maiz tardio", "Soja", null, null], ["LC_2", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["LC_4", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", 70, 6.8], ["LC_5", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["VIt_9", "ENT", "Villa_Itatí", "Maiz", "Soja", 70, 6.8], ["ECa_4a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["ECa_6a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["LAlc_11", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_12", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_13", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_14", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_4", "JMP", "La_Alcira", "Maiz tardio", "Cultivo de Servicio", null, null], ["SCa_3b", "JMP", "Santa_Candida", "Maiz tardio", "Soja 2da", null, null], ["LProv_6", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LProv_7", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LPP_1", "LPP", "Las_Pocas_Plumas", "Maiz", "Soja", 52.5, 6.9], ["LRM_1", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Soja 2da", 52.5, 6], ["LRM_6y11", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Girasol", 52.5, 6.5], ["LRM_8y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["LRM_9y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["DP_15B", "La Susana", "Don_Paco", "Maiz", "Soja", null, null], ["DP_16", "La Susana", "Don_Paco", "Maiz tardio", "Soja", null, null], ["LSu_1SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_2SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SB", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SC", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LHe_1a", "Ment", "La_Helena", "Maiz tardio", "Cultivo de Servicio", 52.5, 4.5], ["LHe_9b-10-encierre", "Ment", "La_Helena", "Maiz tardio", "Soja", 52.5, 6.8], ["LJunta_2A", "PAMPAS-FL", "LA_JUNTA", "Maiz tardio", "Soja", null, null], ["Lmaria_12N", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_14", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_19", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_6", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Be_3", "RLG", "Beneitez", "Maiz", "Girasol", 70, 4.8], ["EQ_13", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["EQ_14", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["LU_1-12-13-14", "RLG", "La_Union", "Maiz", "Soja", 70, 4.5], ["LU_8-9-10-11", "RLG", "La_Union", "Maiz", "Soja", 70, 6.8], ["Lam_1y2", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Lam_4", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Mila_3-4-5-6-7", "RLG", "Milanese", "Maiz tardio", "Soja 2da", null, null], ["13_Jun_4", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_5", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_6", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_7", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["13_Jun_9", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["Ald_1y2", "RyJLC", "Alday", "Maiz", "Soja", 52.5, 5.2], ["Aye_14", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_17", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_3y4", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_7", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_8a", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Beth_2", "RyJLC", "Bethuart", "Maiz", "Maiz Silo 2da", 52.5, 6.8], ["Bo_7", "RyJLC", "Bonanza", "Maiz", "Maiz Silo 2da", 52.5, 4.7], ["Bo_8y9", "RyJLC", "Bonanza", "Maiz", "Soja", 52.5, 4.7], ["DG_16a", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_18", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_5", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DLu_1y2", "RyJLC", "Don_Lui", "Maiz tardio", "Cultivo de Servicio", 52.5, 6], ["EAm_1", "RyJLC", "El_Amanecer", "Maiz", "Soja", 52.5, 6], ["EA_1-2-3-4", "RyJLC", "El_Anochecer", "Maiz", "Soja", 52.5, 4.7], ["ECo_1", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_2", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Pastoreo", 52.5, 6], ["ECo_3", "RyJLC", "El_Coco", "Maiz tardio", "Maiz Silo Tardio", 52.5, 6], ["ECo_4a", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_4b", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ECo_5", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ELG_10", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_4", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja 2da", 52.5, 6], ["ELG_5", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja", 52.5, 6.8], ["ELG_7", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja", 52.5, 6.8], ["ELG_8", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_9a", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6], ["LA_1a", "RyJLC", "La_Alegría", "Maiz", "Soja", 52.5, 5.2], ["LAP_2b", "RyJLC", "La_Alegría_Puesto", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_8", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_9", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["LP_12", "RyJLC", "La_Ponderosa", "Maiz", "Soja", 52.5, 6.8], ["LP_5", "RyJLC", "La_Ponderosa", "Maiz tardio", "Natural", 52.5, 6], ["SBe_8b", "RyJLC", "San_Benito", "Maiz", "Maiz Silo 2da", 52.5, 6], ["SJul_7a", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_7b", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_8", "RyJLC", "San_Julio", "Maiz", "Soja 2da", 52.5, 5.2], ["SJul_9", "RyJLC", "San_Julio", "Maiz", "Soja", 52.5, 6.8], ["SRi_26y27", "RyJLC", "San_Ricardo", "Maiz", "Soja", 52.5, 6], ["DJa_1", "SS", "Don_Javier", "Maiz tardio", "Soja", null, null], ["Mo_1", "SS", "El_Moro", "Maiz tardio", "Maiz", null, null], ["ER_1y2", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["ER_9y10", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["MF_11-13-Rome", "SS", "Martín_Fierro", "Maiz", "Soja", 70, 6.2], ["MF_17", "SS", "Martín_Fierro", "Maiz tardio", "Soja", 70, null], ["FNC-FNG-FO", "SS", "San_Silvestre", "Maiz", "Soja", 70, 5.8], ["FS", "SS", "San_Silvestre", "Maiz tardio", "Pastura", 70, null], ["SS_1", "SS", "San_Silvestre", "Maiz tardio", "Pastura", null, null], ["SS_C4ayb", "SS", "San_Silvestre", "Maiz", "Soja 2da", 70, 6], ["SS_C4c", "SS", "San_Silvestre", "Maiz", "Maiz 2da", 70, 5.8], ["Damb_T5", "TAS", "Dambrosio", "Maiz", "Soja", 52.5, 6], ["Damb_T6", "TAS", "Dambrosio", "Maiz tardio", "Soja", 52.5, 6], ["EF_n", "TAS", "El_Facundo", "Maiz tardio", "Cultivo de Servicio", null, 4.5], ["EF_s", "TAS", "El_Facundo", "Maiz", "Soja", 52.5, 4.5], ["LBo_14", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 5.8], ["LBo_2", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 4], ["LBo_4", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_5", "TAS", "La_Boya", "Maiz", "Maiz Silo Tardio", 52.5, 6.5], ["LBo_7", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_8a", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, null], ["LBo_9a", "TAS", "La_Boya", "Maiz tardio", "Pastura", 52.5, 6], ["LLu_3r", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.8], ["LLu_5", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.5], ["LCor_1", "TAS", "Las_Corridas", "Maiz tardio", "Verdeo de Invierno", 52.5, 5.8], ["LU_8-9-10-11 Cos", "UAP", "La_Union", "Maiz", "Soja", 70, 6.8]], "ambientes": [["L3", "L3 (>80% arena)"], ["L2", "L2 (70-80% arena)"], ["L1", "L1 (<70% arena)"], ["ML3", "ML 3 (>80% arena)"], ["ML2", "ML 2 (70-80% arena)"], ["ML1", "ML 1 (<70% arena)"], ["ML-T", "ML-T (tapto < 60 cm)"], ["B-T1", "B-T1 (tapto <60 cm)"], ["B-T2", "B-T2 (tapto <60 + CaCo3)"], ["B-T3", "B-T3 (tapto <60 + >8ph)"], ["B-Ts1", "B-Ts1 (tosca 60-120cm)"], ["B-Ts2", "B-Ts2 (tosca <60cm)"], ["ML-Ts1", "ML-Ts1 (tosca 60-120cm)"], ["ML-Ts2", "ML-Ts2 (tosca <60cm)"], ["L1-Ts1", "L1-Ts1 (tosca 60-120cm)"], ["L1-Ts2", "L1-Ts2 (tosca <60cm)"], ["B1", "B1 (>3% MO)"], ["B2", "B2 (<3% MO)"], ["B3", "B3 (> 8ph)"]], "antecesores": ["Arveja", "Avena", "Camelina", "Cebada", "Cebada Silo", "Centeno", "Cultivo de Servicio", "Garbanzo", "Girasol", "Inundación", "Maiz", "Maiz tardio", "Maiz 2da", "Maíz Pastoreo", "Maiz Silo", "Maiz Silo Tardio", "Maiz Silo 2da", "Maní", "Natural", "Papa", "Pasto Llorón", "Pastura", "Soja", "Soja 2da", "Sorgo", "Sorgo Pastoreo", "Sorgo Silo", "Trigo", "Trigo Silo", "Verdeo de Invierno", "Verdeo de Verano", "Triticale Silo", "Centeno Silo", "Vicia + Graminea silo"]};
 const $ = s => document.querySelector(s);
 const KEY = "implantacion.v1";
@@ -423,6 +432,7 @@ function renderHome(){
   const pend = db.evals.filter(e=>!e.exportado).length;
   $("#expInfo").textContent = db.evals.length ? `${db.evals.length} evaluaciones guardadas · ${pend} sin exportar.` : "Cuando cargues evaluaciones, desde acá las pasás a planillas.";
   $("#btnExpPend").disabled = !pend; $("#btnExpAll").disabled = !db.evals.length;
+  $("#vozBanner").hidden = vozListo();
 }
 $("#btnNew").onclick = () => {
   cur = { id: uid(), creado: Date.now(), actualizado: Date.now(), exportado: null, fecha: today(), tecnico: db.cfg.tec||"",
@@ -566,10 +576,13 @@ function drawStrip(vals, r){
 }
 $("#iDist").addEventListener("input", e=>{
   const s = cur.surcos[curS]; const before = calc(parseNums(s.texto),num(cur.esp),num(cur.dens),db.cfg.nPl).ok;
-  s.texto = e.target.value; cur.actualizado=Date.now(); cur.exportado=null; save();
+  s.texto = e.target.value;
+  const vv = parseNums(s.texto), N = db.cfg.nPl;
+  if(vv.length > N){ s.texto = vv.slice(0,N).join(" ")+" "; e.target.value = s.texto; e.target.blur(); stopMic(); toast(`Surco completo: ya están las ${N} distancias (planta ${N+1}). No se cargan más valores.`,4000); }
+  cur.actualizado=Date.now(); cur.exportado=null; save();
   renderTabs(); renderSurcoCalc();
   const after = calc(parseNums(s.texto),num(cur.esp),num(cur.dens),db.cfg.nPl);
-  if(after.ok && !before){ buzz([60,60,60]); renderFoot(); }
+  if(after.ok && !before){ buzz([60,60,60]); if(recOn){ stopMic(); e.target.blur(); toast(`Surco completo: ${N} distancias cargadas.`); } renderFoot(); }
   else if(!after.ok && before) renderFoot();
 });
 $("#iSector").addEventListener("input", e=>{ cur.surcos[curS].sector=e.target.value; save(); });
@@ -581,18 +594,174 @@ let kbNum=false;
 $("#btnKb").onclick = () => { kbNum=!kbNum; const t=$("#iDist"); t.setAttribute("inputmode", kbNum?"decimal":"text"); $("#btnKb").textContent = kbNum?"ABC":"123"; t.blur(); focusDist();
   toast(kbNum?"Teclado numérico: separá los valores con coma o guion":"Teclado normal: usá el micrófono del teclado para dictar"); };
 
-/* ---------------- dictado del navegador ---------------- */
+/* ---------------- dictado ----------------
+   1) Dictado propio (Vosk, en el celular): funciona con y sin señal una vez descargado.
+   2) Si no está descargado y hay señal: reconocimiento de voz del navegador.
+   3) Sin señal y sin descarga: micrófono del teclado. */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MODEL_URL = "https://huggingface.co/rhasspy/vosk-models/resolve/main/es/vosk-model-small-es-0.42.zip";
+const MODEL_KEY = "modelo_es_042";
 let rec=null, recOn=false;
-function micHint(){
-  $("#micHint").textContent = SR
-    ? "Con señal podés usar “Dictar”. Sin señal, tocá el cuadro y usá el micrófono 🎤 del teclado."
-    : "Tocá el cuadro y usá el micrófono del teclado para dictar. Decí los números con una pausa entre cada uno.";
-  if(!SR) $("#btnMic").hidden = true;
+
+/* números en palabras para restringir el reconocimiento a distancias */
+function numPalabras(n){
+  const U=["","uno","dos","tres","cuatro","cinco","seis","siete","ocho","nueve","diez","once","doce","trece","catorce","quince","dieciséis","diecisiete","dieciocho","diecinueve","veinte","veintiuno","veintidós","veintitrés","veinticuatro","veinticinco","veintiséis","veintisiete","veintiocho","veintinueve"];
+  const T=["","","","treinta","cuarenta","cincuenta","sesenta","setenta","ochenta","noventa"];
+  const H=["","ciento","doscientos","trescientos","cuatrocientos","quinientos","seiscientos","setecientos","ochocientos","novecientos"];
+  if(n<30) return U[n];
+  if(n<100) return T[Math.floor(n/10)] + (n%10 ? " y "+U[n%10] : "");
+  if(n===100) return "cien";
+  if(n<1000) return H[Math.floor(n/100)] + (n%100 ? " "+numPalabras(n%100) : "");
+  return "mil" + (n%1000 ? " "+numPalabras(n%1000) : "");
 }
-function stopMic(){ recOn=false; const r=rec; rec=null; if(r){ try{ r.abort(); }catch(e){} } $("#btnMic").classList.remove("on"); $("#micTxt").textContent="Dictar"; $("#iDist").classList.remove("listen"); $("#interim").textContent=""; }
-/* Une los resultados de una sesión sin repetir: Chrome en Android a veces devuelve
-   cada resultado con todo lo dicho antes ("51", "51 96", "51 96 128"). */
+const GRAMATICA = JSON.stringify([...Array.from({length:1500},(_,i)=>numPalabras(i+1)), "[unk]"]);
+
+function vozListo(){ return !!(db.cfg && db.cfg.voz === MODEL_KEY); }
+function micHint(){
+  $("#micHint").textContent = vozListo()
+    ? "Tocá “Dictar” y decí cada distancia con una pausa corta entre una y otra. Funciona sin señal."
+    : (SR ? "Con señal podés usar “Dictar”. Para dictar sin señal, descargá el dictado en Ajustes (una vez, con wifi)."
+          : "Tocá el cuadro y usá el micrófono del teclado. Para dictar sin señal, descargá el dictado en Ajustes.");
+  $("#btnMic").hidden = !(vozListo() || SR);
+}
+function setMicUI(on, txt){
+  $("#btnMic").classList.toggle("on", on); $("#micTxt").textContent = txt || (on ? "Escuchando… tocá para parar" : "Dictar");
+  $("#iDist").classList.toggle("listen", on); if(!on) $("#interim").textContent = "";
+}
+function useKeyboard(msg){
+  const t=$("#iDist"); t.setAttribute("inputmode","text"); kbNum=false; $("#btnKb").textContent="123";
+  t.focus(); t.setSelectionRange(t.value.length,t.value.length);
+  toast(msg||"Sin señal: tocá el micrófono 🎤 del teclado y dictá los números.",5500);
+}
+/* agrega números reconocidos al surco actual (como cifras) */
+function agregarNumeros(txt){
+  const nums = parseNums(txt); if(!nums.length) return;
+  const s = cur.surcos[curS];
+  const ta = $("#iDist");
+  ta.value = ((s.texto||"").trim() + " " + nums.join(" ")).trim() + " ";
+  ta.dispatchEvent(new Event("input"));   // aplica tope, guarda y recalcula
+}
+function stopMic(){
+  recOn=false;
+  const r=rec; rec=null; if(r){ try{ r.abort(); }catch(e){} }
+  vozStop();
+  setMicUI(false);
+}
+
+/* ---- 1) dictado propio (Vosk) ---- */
+let vModel=null, vLoading=null, vCtx=null, vStream=null, vNode=null, vRec=null;
+async function vozCargar(){
+  if(vModel) return vModel;
+  if(!vLoading){
+    vLoading = (async () => {
+      if(!window.Vosk) throw new Error("sin libreria");
+      // con la clave fija, si el modelo ya está guardado en el celular no se descarga nada
+      const m = await Vosk.createModel("./modelo-no-descargado.tar.gz#k="+MODEL_KEY, 0);
+      vModel = m; return m;
+    })().catch(e=>{ vLoading=null; throw e; });
+  }
+  return vLoading;
+}
+async function vozStart(){
+  setMicUI(true, "Preparando dictado…");
+  try{
+    const model = await vozCargar();
+    if(!recOn) return;
+    vStream = await navigator.mediaDevices.getUserMedia({ video:false, audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1 } });
+    vCtx = new (window.AudioContext||window.webkitAudioContext)();
+    await vCtx.resume();
+    vRec = new model.KaldiRecognizer(vCtx.sampleRate, GRAMATICA);
+    vRec.on("result", m => { const t = m.result && m.result.text; $("#interim").textContent=""; if(t && recOn) agregarNumeros(t); });
+    vRec.on("partialresult", m => { if(recOn) $("#interim").textContent = (m.result && m.result.partial) || ""; });
+    const src = vCtx.createMediaStreamSource(vStream);
+    vNode = vCtx.createScriptProcessor(4096, 1, 1);
+    vNode.onaudioprocess = ev => { if(recOn && vRec){ try{ vRec.acceptWaveform(ev.inputBuffer); }catch(e){} } };
+    src.connect(vNode); vNode.connect(vCtx.destination);
+    if(!recOn){ vozStop(); return; }
+    setMicUI(true); buzz(30);
+  }catch(e){
+    const perm = e && (e.name==="NotAllowedError"||e.name==="SecurityError");
+    stopMic();
+    if(perm) toast("Sin permiso para el micrófono. Habilitalo en los permisos de la app o del navegador.",5000);
+    else { db.cfg.voz=null; save(); micHint(); toast("No se encontró el dictado guardado en este celular. Descargalo de nuevo en Ajustes con wifi.",6000); }
+  }
+}
+function vozStop(){
+  try{ if(vRec){ vRec.remove(); } }catch(e){} vRec=null;
+  try{ if(vNode){ vNode.disconnect(); vNode.onaudioprocess=null; } }catch(e){} vNode=null;
+  try{ if(vStream){ vStream.getTracks().forEach(t=>t.stop()); } }catch(e){} vStream=null;
+  try{ if(vCtx){ vCtx.close(); } }catch(e){} vCtx=null;
+}
+
+/* descarga única: zip de Hugging Face -> tar.gz -> la librería lo guarda en el celular */
+function tarGz(files){
+  const enc = new TextEncoder(), parts = []; let total = 0;
+  // la librería descarta la primera carpeta del archivo: si el zip no la trae, se agrega
+  const tops = new Set(Object.keys(files).map(p=>p.split("/")[0]));
+  if(tops.size!==1 || Object.keys(files).some(p=>!p.includes("/"))){ const f2={}; for(const p of Object.keys(files)) f2["model/"+p]=files[p]; files=f2; }
+  const dirs = new Set();
+  for(const p of Object.keys(files)){ const segs=p.split("/"); for(let i=1;i<segs.length;i++) dirs.add(segs.slice(0,i).join("/")+"/"); }
+  const entries = [...[...dirs].sort().map(d=>[d,null]), ...Object.keys(files).filter(p=>!p.endsWith("/")).sort().map(p=>[p,files[p]])];
+  const oct = (n,len) => n.toString(8).padStart(len-1,"0")+"\0";
+  for(const [name,data] of entries){
+    const h = new Uint8Array(512); const put=(str,off)=>h.set(enc.encode(str),off);
+    let nm=name, prefix="";
+    if(enc.encode(nm).length>100){ const i=nm.lastIndexOf("/", nm.length-2); prefix=nm.slice(0,i); nm=nm.slice(i+1); }
+    put(nm,0); put(data?"0000644\0":"0000755\0",100); put("0000000\0",108); put("0000000\0",116);
+    put(oct(data?data.length:0,12),124); put(oct(Math.floor(Date.now()/1000),12),136);
+    put("        ",148); put(data?"0":"5",156); put("ustar\0",257); put("00",263); put(prefix,345);
+    let sum=0; for(const b of h) sum+=b; put(sum.toString(8).padStart(6,"0")+"\0 ",148);
+    parts.push(h); total+=512;
+    if(data){ parts.push(data); total+=data.length; const pad=(512-data.length%512)%512; if(pad){ parts.push(new Uint8Array(pad)); total+=pad; } }
+  }
+  parts.push(new Uint8Array(1024)); total+=1024;
+  const tar = new Uint8Array(total); let o=0; for(const p of parts){ tar.set(p,o); o+=p.length; }
+  return fflate.gzipSync(tar, { level: 0 });
+}
+let vozBajando=false;
+async function vozDescargar(){
+  if(vozBajando) return;
+  if(!navigator.onLine){ toast("Necesitás señal (mejor wifi) para descargar el dictado."); return; }
+  vozBajando=true; renderVoz();
+  const bar=$("#vozBar"), bi=$("#vozBarI"), info=$("#vozInfo");
+  const paso = (t,p) => { info.textContent=t; if(p!=null){ bar.hidden=false; bi.style.width=Math.round(p*100)+"%"; } };
+  try{
+    paso("Descargando… 0%",0);
+    const r = await fetch(MODEL_URL);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const tot = parseInt(r.headers.get("content-length")||"0",10) || 39817833;
+    const rd = r.body.getReader(); const chunks=[]; let got=0;
+    for(;;){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); got+=value.length; paso(`Descargando… ${Math.min(99,Math.round(got/tot*100))}% (${(got/1048576).toFixed(0)} de ${(tot/1048576).toFixed(0)} MB)`, Math.min(.99,got/tot)*0.8); }
+    const zip = new Uint8Array(got); let o=0; for(const c of chunks){ zip.set(c,o); o+=c.length; }
+    paso("Preparando el dictado… (puede tardar un minuto)", .85);
+    await new Promise(r=>setTimeout(r,50));
+    const files = fflate.unzipSync(zip);
+    const gz = tarGz(files);
+    paso("Guardando en el celular…", .92);
+    const url = URL.createObjectURL(new Blob([gz],{type:"application/gzip"}));
+    try{ if(vModel){ vModel.terminate(); } }catch(e){} vModel=null; vLoading=null;
+    const m = await Vosk.createModel(url+"#k="+MODEL_KEY, 0);
+    URL.revokeObjectURL(url);
+    vModel = m; vLoading = Promise.resolve(m);
+    db.cfg.voz = MODEL_KEY; save();
+    try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    paso("", 1); toast("Listo: ya podés dictar sin señal",4000);
+  }catch(e){
+    info.textContent = "No se pudo descargar ("+(e&&e.message||e)+"). Probá de nuevo con wifi.";
+  }
+  vozBajando=false; renderVoz(); micHint(); renderHome();
+}
+function renderVoz(){
+  const b=$("#btnVoz"), info=$("#vozInfo");
+  if(vozBajando){ b.disabled=true; b.textContent="Descargando…"; return; }
+  $("#vozBar").hidden=true; b.disabled=false;
+  if(vozListo()){ info.innerHTML="<b>✓ Dictado sin señal instalado en este celular.</b> Si alguna vez falla, volvé a descargarlo."; b.className="btn"; b.textContent="Volver a descargar"; }
+  else { if(!info.textContent || info.textContent.startsWith("✓")) info.textContent="Todavía no está descargado en este celular."; b.className="btn primary"; b.textContent="Descargar dictado sin señal (40 MB)"; }
+}
+$("#btnVoz").onclick = vozDescargar;
+$("#btnVozHome").onclick = () => { show("cfg"); renderCfg(); vozDescargar(); };
+
+/* ---- 2) reconocimiento del navegador (con señal) ---- */
 function collapse(parts){
   const out=[];
   for(const p0 of parts){ const p=p0.trim(); if(!p) continue;
@@ -603,47 +772,41 @@ function collapse(parts){
   }
   return out.join(" ");
 }
-function useKeyboard(msg){
-  const t=$("#iDist"); t.setAttribute("inputmode","text"); kbNum=false; $("#btnKb").textContent="123";
-  t.focus(); t.setSelectionRange(t.value.length,t.value.length);
-  toast(msg||"Sin señal: tocá el micrófono 🎤 del teclado y dictá los números.",5500);
-}
-function startSession(local){
+function startSession(){
   const r = new SR(); rec = r;
   r.lang = "es-AR"; r.continuous = false; r.interimResults = true; r.maxAlternatives = 1;
-  if(local){ try{ r.processLocally = true; }catch(e){} }
   const s = cur.surcos[curS], base = (s.texto||"").trim();
   r.onresult = ev => {
     if(rec!==r) return;
     const fin=[]; let interim="";
     for(let i=0;i<ev.results.length;i++){ const t=ev.results[i][0].transcript; if(ev.results[i].isFinal) fin.push(t); else interim=t; }
-    const add = collapse(fin);
-    const txt = (base + " " + add).trim();
-    if(add && txt + " " !== s.texto){ s.texto = txt + " "; $("#iDist").value = s.texto; cur.actualizado=Date.now(); cur.exportado=null; save(); $("#iDist").dispatchEvent(new Event("input")); }
-    $("#interim").textContent = interim;
+    const add = parseNums(collapse(fin)).join(" ");
+    const txt = (base + " " + add).trim() + " ";
+    if(add && txt !== s.texto){ const ta=$("#iDist"); ta.value = txt; ta.dispatchEvent(new Event("input")); }
+    if(rec===r) $("#interim").textContent = interim;
   };
   r.onerror = ev => {
     if(rec!==r) return;
     if(ev.error==="no-speech"||ev.error==="aborted") return;
-    if((ev.error==="language-not-supported"||ev.error==="service-not-allowed") && local && navigator.onLine){ startSession(false); return; }
     stopMic();
-    if(ev.error==="network"||!navigator.onLine) useKeyboard("El dictado del botón necesita señal. Tocá el micrófono 🎤 del teclado y dictá ahí.");
+    if(ev.error==="network"||!navigator.onLine) useKeyboard("Este dictado necesita señal. Descargá el dictado sin señal en Ajustes cuando tengas wifi.");
     else if(ev.error==="not-allowed") toast("Sin permiso para el micrófono. Habilitalo en los permisos del navegador.",5000);
     else useKeyboard("El dictado se detuvo. Podés seguir con el micrófono 🎤 del teclado.");
   };
-  r.onend = () => { if(rec===r && recOn){ $("#interim").textContent=""; setTimeout(()=>{ if(rec===r && recOn) startSession(local); }, 150); } };
+  r.onend = () => { if(rec===r && recOn){ $("#interim").textContent=""; setTimeout(()=>{ if(rec===r && recOn) startSession(); }, 150); } };
   try{ r.start(); }catch(e){ stopMic(); useKeyboard("No se pudo iniciar el dictado. Usá el micrófono 🎤 del teclado."); }
 }
+
+/* ---- botón Dictar ---- */
 function startMic(){
-  if(!navigator.onLine){ useKeyboard(); return; }
-  recOn=true; $("#btnMic").classList.add("on"); $("#micTxt").textContent="Escuchando… tocá para parar"; $("#iDist").classList.add("listen"); buzz(30);
-  startSession(false);
+  const r = calc(parseNums(cur.surcos[curS].texto), num(cur.esp), num(cur.dens), db.cfg.nPl);
+  if(r.n >= db.cfg.nPl){ toast(`Este surco ya tiene las ${db.cfg.nPl} distancias. Borrá con “⌫ Último” si querés corregir.`,4000); return; }
+  $("#iDist").blur();
+  if(vozListo()){ recOn=true; vozStart(); return; }
+  if(SR && navigator.onLine){ recOn=true; setMicUI(true); buzz(30); startSession(); return; }
+  useKeyboard("Para dictar sin señal, descargá el dictado en Ajustes una vez con wifi. Mientras tanto, probá el micrófono 🎤 del teclado.");
 }
 $("#btnMic").onclick = () => { if(recOn){ stopMic(); return; } startMic(); };
-$("#btnPrepDict").onclick = async () => {
-  try{ const ok = await SR.install({langs:["es-AR"], processLocally:true}); toast(ok?"Listo: el dictado del navegador queda disponible sin señal":"Este celular no permite el dictado del navegador sin señal. Usá el micrófono del teclado.",5000); renderCfg(); }
-  catch(e){ toast("No se pudo preparar. Usá el micrófono del teclado.",4500); }
-};
 
 /* ---------------- pantalla activa ---------------- */
 let lock=null;
@@ -708,8 +871,7 @@ function renderCfg(){
   $("#cPl").value = db.cfg.nPl; $("#cSur").value = db.cfg.nSur; $("#cTec").value = db.cfg.tec||"";
   $("#lotesInfo").textContent = `${lotes().length} lotes cargados${db.lotesFecha?` (actualizada el ${new Date(db.lotesFecha).toLocaleDateString("es-AR")})`:" (lista original de la planilla 25-26)"}.`;
   $("#verInfo").textContent = `Versión ${VERSION} · ${db.evals.length} evaluaciones guardadas en este celular.`;
-  const pb = $("#btnPrepDict"); pb.hidden = true;
-  if(SR && SR.available){ try{ SR.available({langs:["es-AR"], processLocally:true}).then(s=>{ if(s==="downloadable"){ pb.hidden=false; } else if(s==="available"){ $("#dictInfo").insertAdjacentHTML("beforeend"," <b>El dictado del navegador ya funciona sin señal en este celular.</b>"); } }).catch(()=>{}); }catch(e){} }
+  renderVoz();
 }
 function readCfg(){
   const p=parseInt($("#cPl").value,10), s=parseInt($("#cSur").value,10);

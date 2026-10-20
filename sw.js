@@ -1,6 +1,6 @@
 /* Recuentos de Implantación – service worker (uso sin señal) */
-const CACHE = "recuentos-implantacion-1.0.1";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const CACHE = "recuentos-implantacion-1.1.0";
+const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./vosk.js", "./fflate.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // Primero lo guardado (abre al instante sin señal); si hay señal, se actualiza en segundo plano.
