@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Informes de Implantación</title>
+<link rel="icon" href="icon-192.png">
+<style>
+/* Layout: una columna ancha para la computadora; barra cinta métrica igual que la app de campo. */
+:root{
+  --bg:#F3F4EF; --surface:#FFFFFF; --ink:#16190F; --muted:#596150; --line:#D6DACB;
+  --tape:#F2C21B; --tape-ink:#1A1A10; --accent:#2F5D23; --ok:#2E7D32; --warn:#A35F00; --bad:#C62828;
+  --ok-bg:#E3F1E1; --warn-bg:#FFF1D6; --bad-bg:#FDE3E1;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C; --accent:#9CCB7F;
+  --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --ok-bg:#1D3220; --warn-bg:#3A2C10; --bad-bg:#3D1A18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C; --accent:#9CCB7F;
+  --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --ok-bg:#1D3220; --warn-bg:#3A2C10; --bad-bg:#3D1A18; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--font)}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+.top{background:var(--tape);color:var(--tape-ink);padding:14px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));
+  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.55) 0 1px,transparent 1px 10px);background-size:100% 7px;background-repeat:no-repeat;background-position:0 100%}
+.top h1{margin:0 auto;max-width:980px;font-size:19px;font-weight:800}
+main{max-width:980px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.step{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.step h2{margin:0;font-size:16px;display:flex;gap:10px;align-items:baseline}
+.step h2 span{font-size:12px;font-weight:800;color:var(--tape-ink);background:var(--tape);border-radius:99px;padding:2px 9px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted);flex:1 1 200px;min-width:0}
+label.f input,label.f select{border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);color:var(--ink);font-weight:500;min-height:42px;width:100%}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;min-height:42px}
+.btn.primary{background:var(--tape);border-color:var(--tape);color:var(--tape-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.msg{padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px}
+.msg.ok{background:var(--ok-bg);color:var(--ok)} .msg.bad{background:var(--bad-bg);color:var(--bad)} .msg.part{background:var(--warn-bg);color:var(--warn)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.tblwrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+td.n,th.n{text-align:right}
+tr.off td{color:var(--muted)}
+.parte td{background:var(--bg);font-weight:700;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top"><h1>Informes de Implantación</h1></header>
+<main>
+  <section class="step">
+    <h2><span>1</span>Datos de la planilla central</h2>
+    <div class="row">
+      <label class="f" style="flex:4 1 360px">Dirección de envío (la misma que en la app, termina en /exec)
+        <input id="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false"></label>
+      <button class="btn primary" id="btnCargar">Cargar datos</button>
+    </div>
+    <p class="msg" id="msgDatos" hidden></p>
+  </section>
+
+  <section class="step" id="s2" hidden>
+    <h2><span>2</span>Elegí empresa, campaña y cultivo</h2>
+    <div class="row">
+      <label class="f">Empresa<select id="fEmp"></select></label>
+      <label class="f">Campaña<select id="fCamp"></select></label>
+      <label class="f">Cultivo<select id="fCult"></select></label>
+    </div>
+    <div class="tblwrap"><table id="tbl"></table></div>
+    <p class="small muted" id="info"></p>
+  </section>
+
+  <section class="step" id="s3" hidden>
+    <h2><span>3</span>Generar el Excel</h2>
+    <p class="small" id="plantInfo">Plantilla: <b>Recuentos y uniformidad Maíz 26-27 (en blanco)</b>. Se completan solo las celdas de carga de cada hoja L; el Resumen, los cálculos y los gráficos se actualizan al abrir el archivo en Excel.</p>
+    <div class="row">
+      <label class="f">Usar otra plantilla (opcional, .xlsx con hojas L1…L20)<input type="file" id="fPlant" accept=".xlsx"></label>
+      <button class="btn primary" id="btnGen">Generar Excel</button>
+    </div>
+    <p class="msg" id="msgGen" hidden></p>
+  </section>
+</main>
+<script src="fflate.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const POR_ARCHIVO = 20, MAX_SURCOS = 8, N_DIST = 15;
+const ANTECESOR = {"arveja":"arv","avena":"av","camelina":"cam","cebada":"ce","cebada silo":"ces","centeno":"cent","cultivo de servicio":"cc","garbanzo":"garb","girasol":"gi","inundacion":"inund","maiz":"mz","maiz tardio":"mzt","maiz 2da":"mz2","maiz pastoreo":"mzp","maiz silo":"mzs","maiz silo tardio":"mzst","maiz silo 2da":"mzs2","mani":"mn","natural":"nat","papa":"papa","pasto lloron":"LL","pastura":"PP","soja":"sj","soja 2da":"sj2","sorgo":"sg","sorgo pastoreo":"sgp","sorgo silo":"sgs","trigo":"tr","trigo silo":"trs","verdeo de invierno":"vi","verdeo de verano":"vv","triticale silo":"trits","centeno silo":"cents","vicia + graminea silo":"grs/vics"};
+const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+const grupoCultivo = c => norm(c).startsWith("giras") ? "Girasol" : (norm(c).startsWith("maiz") ? "Maíz" : (c||"Sin cultivo"));
+let EV=[], SU={}, plantilla=null;
+
+// dirección recordada (la app guarda la suya en este mismo sitio)
+try{ const a = JSON.parse(localStorage.getItem("implantacion.v1")||"{}"); $("#url").value = localStorage.getItem("informe.url") || (a.cfg&&a.cfg.url) || ""; }catch(e){}
+
+$("#btnCargar").onclick = async () => {
+  const url = $("#url").value.trim(); const m=$("#msgDatos");
+  try{ localStorage.setItem("informe.url", url); }catch(e){}
+  m.hidden=false; m.className="msg"; m.textContent="Cargando…";
+  try{
+    const r = await fetch(url + (url.includes("?")?"&":"?") + "accion=datos"); const j = await r.json();
+    if(!j.ok || !Array.isArray(j.evaluaciones)) throw new Error("respuesta inesperada");
+    EV = j.evaluaciones.filter(e=>e.ID_Evaluacion);
+    SU = {}; for(const s of j.surcos||[]){ (SU[s.ID_Evaluacion] = SU[s.ID_Evaluacion]||[]).push(s); }
+    for(const k in SU) SU[k].sort((a,b)=>(+a.Surco)-(+b.Surco));
+    m.className="msg ok"; m.textContent = `✓ ${EV.length} evaluaciones cargadas.`;
+    llenarFiltros(); $("#s2").hidden=false; $("#s3").hidden=false;
+  }catch(e){
+    m.className="msg bad"; m.textContent = "No se pudieron leer los datos. Revisá la dirección y que la planilla tenga la versión nueva del código (con ?accion=datos).";
+  }
+};
+function opciones(sel, vals, keep){ const prev = keep ? sel.value : null; sel.innerHTML = vals.map(v=>`<option>${esc(v)}</option>`).join(""); if(prev && vals.includes(prev)) sel.value=prev; }
+function llenarFiltros(){
+  opciones($("#fEmp"), [...new Set(EV.map(e=>String(e.Empresa||"Sin empresa")))].sort(), true);
+  actualizar();
+}
+function actualizar(){
+  const emp = $("#fEmp").value;
+  const e1 = EV.filter(e=>String(e.Empresa||"Sin empresa")===emp);
+  opciones($("#fCamp"), [...new Set(e1.map(e=>String(e.Campania||"")))].sort().reverse(), true);
+  const e2 = e1.filter(e=>String(e.Campania||"")===$("#fCamp").value);
+  opciones($("#fCult"), [...new Set(e2.map(e=>grupoCultivo(e.Cultivo)))].sort(), true);
+  tabla();
+}
+["fEmp","fCamp"].forEach(id=>$("#"+id).addEventListener("change", actualizar));
+$("#fCult").addEventListener("change", tabla);
+let sel = [];
+function elegidas(){
+  return EV.filter(e => String(e.Empresa||"Sin empresa")===$("#fEmp").value && String(e.Campania||"")===$("#fCamp").value && grupoCultivo(e.Cultivo)===$("#fCult").value)
+    .sort((a,b)=> String(a.Campo).localeCompare(String(b.Campo)) || String(a.Lote).localeCompare(String(b.Lote),undefined,{numeric:true}) || String(a.Ambiente).localeCompare(String(b.Ambiente)) || String(a.Fecha).localeCompare(String(b.Fecha)));
+}
+const f0 = v => (v===""||v==null) ? "—" : Math.round(+v).toLocaleString("es-AR");
+const fp = v => (v===""||v==null) ? "—" : (v*100).toLocaleString("es-AR",{maximumFractionDigits:1})+"%";
+const fd = s => { s=String(s||""); const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[3]}/${m[2]}/${m[1]}`:s; };
+function tabla(){
+  sel = elegidas();
+  const off = new Set(JSON.parse(sessionStorage.getItem("informe.off")||"[]"));
+  let h = `<thead><tr><th></th><th>Hoja</th><th>Fecha</th><th>Campo</th><th>Lote</th><th>Ambiente</th><th>Cultivo</th><th class="n">Surcos</th><th class="n">Pl/ha</th><th class="n">CV</th></tr></thead><tbody>`;
+  let k=0;
+  sel.forEach((e)=>{
+    const on = !off.has(e.ID_Evaluacion);
+    if(on && k % POR_ARCHIVO === 0) h += `<tr class="parte"><td colspan="10">Archivo ${Math.floor(k/POR_ARCHIVO)+1}</td></tr>`;
+    const ns = (SU[e.ID_Evaluacion]||[]).length;
+    h += `<tr class="${on?"":"off"}"><td><input type="checkbox" data-id="${esc(e.ID_Evaluacion)}" ${on?"checked":""} aria-label="Incluir"></td><td>${on?"L"+((k%POR_ARCHIVO)+1):"—"}</td><td>${fd(e.Fecha)}</td><td>${esc(e.Campo)}</td><td>${esc(e.Lote)}</td><td>${esc(e.Ambiente)||"Lote completo"}</td><td>${esc(e.Cultivo)}</td><td class="n">${ns}${ns>MAX_SURCOS?" ⚠":""}</td><td class="n">${f0(e.Plantas_ha)}</td><td class="n">${fp(e.CV)}</td></tr>`;
+    if(on) k++;
+  });
+  $("#tbl").innerHTML = h + "</tbody>";
+  $("#tbl").querySelectorAll("input[type=checkbox]").forEach(c=>c.onchange=()=>{ const o=new Set(JSON.parse(sessionStorage.getItem("informe.off")||"[]")); c.checked?o.delete(c.dataset.id):o.add(c.dataset.id); sessionStorage.setItem("informe.off",JSON.stringify([...o])); tabla(); });
+  const nArch = Math.ceil(k/POR_ARCHIVO);
+  $("#info").textContent = k ? `${k} evaluaciones → ${nArch} archivo${nArch>1?"s":""} (la plantilla tiene ${POR_ARCHIVO} hojas de lote por archivo, y hasta ${MAX_SURCOS} surcos por hoja).` : "No hay evaluaciones con esos filtros.";
+  $("#btnGen").disabled = !k;
+}
+
+/* ---------- edición del .xlsx sin tocar formato, fórmulas ni gráficos ---------- */
+const colNum = c => c.split("").reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0);
+const colTxt = n => { let s=""; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
+const xmlEsc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function celda(ref, s, val){
+  const st = s ? ` s="${s}"` : "";
+  if(typeof val === "number") return `<c r="${ref}"${st}><v>${val}</v></c>`;
+  return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(val)}</t></is></c>`;
+}
+function setCell(xml, ref, val){
+  if(val===null || val===undefined || val==="") return xml;
+  const re = new RegExp(`<c r="${ref}"((?:\\s+[a-zA-Z:]+="[^"]*")*)\\s*(?:/>|>[\\s\\S]*?</c>)`);
+  const m = xml.match(re);
+  if(m){ const s=(m[1].match(/\ss="(\d+)"/)||[])[1]; return xml.slice(0,m.index) + celda(ref,s,val) + xml.slice(m.index+m[0].length); }
+  const [, col, rowS] = ref.match(/^([A-Z]+)(\d+)$/); const row=+rowS, cn=colNum(col);
+  const rre = new RegExp(`<row r="${row}"([^>]*?)(/>|>([\\s\\S]*?)</row>)`);
+  const rm = xml.match(rre);
+  if(rm){
+    if(rm[2]==="/>"){ const nr=`<row r="${row}"${rm[1]}>${celda(ref,null,val)}</row>`; return xml.slice(0,rm.index)+nr+xml.slice(rm.index+rm[0].length); }
+    const inner = rm[3]; const cre=/<c r="([A-Z]+)\d+"/g; let pos=inner.length, mm;
+    while((mm=cre.exec(inner))){ if(colNum(mm[1])>cn){ pos=mm.index; break; } }
+    const ni = inner.slice(0,pos)+celda(ref,null,val)+inner.slice(pos);
+    const nr = `<row r="${row}"${rm[1]}>${ni}</row>`;
+    return xml.slice(0,rm.index)+nr+xml.slice(rm.index+rm[0].length);
+  }
+  // fila inexistente: insertarla en orden
+  const rows=/<row r="(\d+)"/g; let ins=-1, x;
+  while((x=rows.exec(xml))){ if(+x[1]>row){ ins=x.index; break; } }
+  const nr = `<row r="${row}">${celda(ref,null,val)}</row>`;
+  if(ins<0) ins = xml.indexOf("</sheetData>");
+  return xml.slice(0,ins)+nr+xml.slice(ins);
+}
+function serial(f){ const m=String(f||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return (Date.UTC(+m[1],+m[2]-1,+m[3]) - Date.UTC(1899,11,30))/86400000; }
+const numOr = v => (v===""||v==null||isNaN(+v)) ? null : +v;
+function llenarHoja(xml, e, cultivo){
+  const sur = (SU[e.ID_Evaluacion]||[]).slice(0,MAX_SURCOS);
+  const vals = {
+    C2: e.Campo, G2: serial(e.Fecha), P2: e.Estado_fenologico, C4: e.Lote, C5: e.Ambiente,
+    B7: numOr(e.Densidad_siembra), B9: ANTECESOR[norm(e.Antecesor)] || e.Antecesor, B11: e.Contratista, B13: e.Sembradora,
+    D15: numOr(e.Espaciamiento_cm), J30: e.Observaciones
+  };
+  if(cultivo==="Girasol") vals.B1 = "RECUENTOS POR LOTE - GIRASOL";
+  for(const [ref,v] of Object.entries(vals)) xml = setCell(xml, ref, v);
+  sur.forEach((s,i)=>{ for(let k=0;k<N_DIST;k++){ const v=numOr(s["D"+String(k+1).padStart(2,"0")]); if(v!=null) xml = setCell(xml, colTxt(10+k)+(6+i), v); } });
+  return xml;
+}
+async function obtenerPlantilla(){
+  const f = $("#fPlant").files[0];
+  if(f) return new Uint8Array(await f.arrayBuffer());
+  if(!plantilla){ const r = await fetch("plantilla.xlsx"); if(!r.ok) throw new Error("no se encontró plantilla.xlsx"); plantilla = new Uint8Array(await r.arrayBuffer()); }
+  return plantilla;
+}
+function generarArchivo(tplBytes, evs, cultivo){
+  const files = fflate.unzipSync(tplBytes);
+  const dec = new TextDecoder(), enc = new TextEncoder();
+  const wb = dec.decode(files["xl/workbook.xml"]), rels = dec.decode(files["xl/_rels/workbook.xml.rels"]);
+  const ruta = nombre => {
+    const sm = wb.match(new RegExp(`<sheet [^>]*name="${nombre}"[^>]*r:id="(rId\\d+)"`)) || wb.match(new RegExp(`<sheet [^>]*r:id="(rId\\d+)"[^>]*name="${nombre}"`));
+    if(!sm) throw new Error(`la plantilla no tiene la hoja ${nombre}`);
+    const tm = rels.match(new RegExp(`<Relationship [^>]*Id="${sm[1]}"[^>]*Target="([^"]+)"`)) || rels.match(new RegExp(`<Relationship [^>]*Target="([^"]+)"[^>]*Id="${sm[1]}"`));
+    const t = tm[1].replace(/^\/?xl\//,""); return "xl/" + t.replace(/^\//,"");
+  };
+  evs.forEach((e,i)=>{ const p = ruta("L"+(i+1)); files[p] = enc.encode(llenarHoja(dec.decode(files[p]), e, cultivo)); });
+  // que Excel recalcule todo al abrir (Resumen, gráficos)
+  let w = wb.includes("fullCalcOnLoad") ? wb : wb.replace("<calcPr ", '<calcPr fullCalcOnLoad="1" ');
+  files["xl/workbook.xml"] = enc.encode(w);
+  return fflate.zipSync(files, { level: 6 });
+}
+$("#btnGen").onclick = async () => {
+  const m=$("#msgGen"); m.hidden=false; m.className="msg"; m.textContent="Generando…";
+  try{
+    const off = new Set(JSON.parse(sessionStorage.getItem("informe.off")||"[]"));
+    const evs = sel.filter(e=>!off.has(e.ID_Evaluacion));
+    const tpl = await obtenerPlantilla(); const cult = $("#fCult").value;
+    const partes = Math.ceil(evs.length/POR_ARCHIVO);
+    for(let p=0;p<partes;p++){
+      const out = generarArchivo(tpl, evs.slice(p*POR_ARCHIVO,(p+1)*POR_ARCHIVO), cult);
+      const nombre = `Recuentos y uniformidad ${cult} ${$("#fCamp").value} - ${$("#fEmp").value}${partes>1?` (parte ${p+1})`:""}.xlsx`.replace(/[\\/:*?"<>|]/g,"-");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+      a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    }
+    const largos = evs.filter(e=>(SU[e.ID_Evaluacion]||[]).length>MAX_SURCOS).length;
+    m.className="msg ok"; m.textContent = `✓ ${partes===1?"Archivo generado":partes+" archivos generados"} (${evs.length} evaluaciones). Abrilo en Excel: el Resumen y los gráficos se calculan al abrir.` + (largos?` Atención: ${largos} evaluaciones tienen más de ${MAX_SURCOS} surcos y solo entraron los primeros ${MAX_SURCOS}.`:"");
+  }catch(e){ m.className="msg bad"; m.textContent = "No se pudo generar: " + (e.message||e); }
+};
+</script>
+</body>
+</html>
