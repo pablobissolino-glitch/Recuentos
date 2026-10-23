@@ -9,7 +9,7 @@
 /* Layout: una columna ancha para la computadora; barra cinta métrica igual que la app de campo. */
 :root{
   --bg:#F3F4EF; --surface:#FFFFFF; --ink:#16190F; --muted:#596150; --line:#D6DACB;
-  --tape:#F2C21B; --tape-ink:#1A1A10; --accent:#2F5D23; --ok:#2E7D32; --warn:#A35F00; --bad:#C62828;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#2F5D23; --ok:#2E7D32; --warn:#A35F00; --bad:#C62828;
   --ok-bg:#E3F1E1; --warn-bg:#FFF1D6; --bad-bg:#FDE3E1;
   --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color-scheme:light;
@@ -25,7 +25,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--font)}
 [hidden]{display:none!important}
 button,input,select{font:inherit;color:inherit}
 .top{background:var(--tape);color:var(--tape-ink);padding:14px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));
-  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.55) 0 1px,transparent 1px 10px);background-size:100% 7px;background-repeat:no-repeat;background-position:0 100%}
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 1px,transparent 1px 10px);background-size:100% 7px;background-repeat:no-repeat;background-position:0 100%}
 .top h1{margin:0 auto;max-width:980px;font-size:19px;font-weight:800}
 main{max-width:980px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
 .step{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -51,7 +51,7 @@ tr.off td{color:var(--muted)}
 </style>
 </head>
 <body>
-<header class="top"><h1>Informes de Implantación</h1></header>
+<header class="top"><h1><img src="logo-marca.png" alt="SOS Agro" style="width:34px;height:34px;vertical-align:middle;margin-right:10px">Informes de Implantación</h1></header>
 <main>
   <section class="step">
     <h2><span>1</span>Datos de la planilla central</h2>

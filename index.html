@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Recuentos de Implantación</title>
 <meta name="description" content="Registro a campo de distancias entre plantas (maíz y girasol), con dictado y funcionamiento sin señal.">
-<meta name="theme-color" content="#F2C21B">
+<meta name="theme-color" content="#4E9A1C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,10 +14,10 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-/* Layout: una columna para celular; barra superior fija color cinta métrica; tarjetas solo para surcos y resultados. */
+/* Layout: una columna para celular; barra superior fija verde SOS Agro con marcas de cinta métrica; tarjetas solo para surcos y resultados. */
 :root{
   --bg:#F3F4EF; --surface:#FFFFFF; --ink:#16190F; --muted:#596150; --line:#D6DACB;
-  --tape:#F2C21B; --tape-ink:#1A1A10; --accent:#2F5D23;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#2F5D23;
   --ok:#2E7D32; --warn:#A35F00; --bad:#C62828; --warn-bg:#FFF1D6; --bad-bg:#FDE3E1; --ok-bg:#E3F1E1;
   --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
@@ -26,11 +26,11 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C;
-  --tape:#F2C21B; --tape-ink:#1A1A10; --accent:#9CCB7F;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#9CCB7F;
   --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --warn-bg:#3A2C10; --bad-bg:#3D1A18; --ok-bg:#1D3220; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C;
-  --tape:#F2C21B; --tape-ink:#1A1A10; --accent:#9CCB7F;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#9CCB7F;
   --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --warn-bg:#3A2C10; --bad-bg:#3D1A18; --ok-bg:#1D3220; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -44,12 +44,14 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:20;background:var(--tape);color:var(--tape-ink);
   padding:calc(env(safe-area-inset-top,0px) + 10px) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
   display:flex;align-items:center;gap:10px;
-  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.55) 0 1px,transparent 1px 10px);
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 1px,transparent 1px 10px);
   background-size:100% 7px;background-repeat:no-repeat;background-position:0 100%}
 .top h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.01em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .back{background:none;border:0;font-size:22px;line-height:1;padding:4px 8px 4px 0;cursor:pointer;color:inherit}
-.pill{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(0,0,0,.12);white-space:nowrap}
+.pill{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.2);white-space:nowrap}
 .pill.off{background:var(--tape-ink);color:var(--tape)}
+.top .logo{width:34px;height:34px;flex:none;display:block}
+.homelogo{display:block;width:min(220px,60%);height:auto;margin:4px auto 2px}
 .iconbtn{background:none;border:0;color:inherit;font-size:20px;padding:4px;cursor:pointer}
 
 main{padding:16px max(16px,env(safe-area-inset-right,0px)) 120px max(16px,env(safe-area-inset-left,0px));max-width:720px;margin:0 auto}
@@ -77,6 +79,8 @@ p{margin:0}
 .grid .full{grid-column:1/-1}
 @media (max-width:420px){.grid{grid-template-columns:1fr}}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:650;color:var(--muted);min-width:0}
+label.f input[readonly]{background:transparent;border-style:dashed;color:var(--ink)}
+label.f input:disabled,label.f select:disabled,label.f textarea:disabled,.full .btn:disabled{opacity:.4}
 label.f input,label.f select,label.f textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:11px 12px;font-size:16px;color:var(--ink);font-weight:500;min-height:48px;width:100%}
 label.f.err input{border-color:var(--bad)}
 .hint{font-size:12px;font-weight:500;color:var(--muted)}
@@ -183,6 +187,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <body>
 <header class="top">
   <button class="back" id="btnBack" aria-label="Volver" hidden>←</button>
+  <img class="logo" src="logo-marca.png" alt="SOS Agro">
   <h1 id="ttl">Recuentos de Implantación</h1>
   <span class="pill" id="net">Con señal</span>
   <button class="iconbtn" id="btnCfg" aria-label="Ajustes">⚙︎</button>
@@ -191,6 +196,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <main>
 <!-- INICIO -->
 <section id="v-home">
+  <img class="homelogo" src="logo.png" alt="SOS Agro">
   <div class="banner" id="installBanner" hidden>
     <span id="installTxt">Instalá la app en el celular para usarla sin señal.</span>
     <div class="row" style="margin-top:8px"><button class="btn primary" id="btnInstall" hidden>Instalar app</button></div>
@@ -223,12 +229,13 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
         <input id="iLote" autocomplete="off" placeholder="Buscar lote o campo…" enterkeyhint="next">
         <div class="sugs" id="sugs" hidden></div>
       </div>
-      <span class="hint" id="loteHint">Si el lote no está en la lista, escribilo igual y completá los datos.</span>
+      <span class="hint" id="loteHint">Primero elegí el lote de la lista: el resto se completa solo con los datos de la planilla. Después podés corregir ambiente, densidad, genética, etc.</span>
     </label>
-    <label class="f">Empresa<input id="iEmpresa"></label>
-    <label class="f">Campo<input id="iCampo"></label>
+    <label class="f">Empresa<input id="iEmpresa" readonly tabindex="-1" placeholder="sale del lote"></label>
+    <label class="f">Campo<input id="iCampo" readonly tabindex="-1" placeholder="sale del lote"></label>
     <label class="f">Cultivo
       <select id="iCultivo"><option>Maíz</option><option>Maíz tardío</option><option>Girasol</option></select></label>
+    <label class="f">Genética<input id="iGen" list="dlGen" placeholder="Híbrido"></label>
     <label class="f">Ambiente / sitio
       <select id="iAmb"></select></label>
     <label class="f">Fecha<input type="date" id="iFecha"></label>
@@ -311,7 +318,10 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
   <div class="card">
     <b>Lista de lotes</b>
     <p class="small muted" id="lotesInfo"></p>
-    <p class="small">Para actualizarla, elegí un archivo CSV exportado desde la hoja “Lotes App” (columnas: EMPRESA, Campo, Lote, Cultivo, Antecesor, Espaciamiento, …, Densidad).</p>
+    <p class="small">La lista se baja sola de la planilla de Google (hoja publicada como CSV) cada vez que abrís la app con señal, y queda guardada para usarla sin señal.</p>
+    <label class="f">Dirección de la lista (Publicar en la web › CSV)<input id="cLotesUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?…output=csv"></label>
+    <div class="row"><button class="btn primary" id="btnLotes">Actualizar lista desde la planilla</button></div>
+    <p class="small muted">Sin señal o sin dirección, también podés cargar el CSV a mano (columnas: Empresa, Campo, Lote, Ambiente, Cultivo, Genética, Antecesor, Espaciamiento, Densidad).</p>
     <input type="file" id="fLotes" accept=".csv,text/csv">
   </div>
   <div class="card">
@@ -339,13 +349,14 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <div class="foot" id="foot"></div>
 <div class="toast" id="toast" hidden></div>
 
-<datalist id="dlEF"></datalist><datalist id="dlAnt"></datalist><datalist id="dlContr"></datalist><datalist id="dlSemb"></datalist>
+<datalist id="dlEF"></datalist><datalist id="dlAnt"></datalist><datalist id="dlContr"></datalist><datalist id="dlSemb"></datalist><datalist id="dlGen"></datalist>
 
 <script src="fflate.js"></script>
 <script src="vosk.js"></script>
 <script>
 "use strict";
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
+const LOTES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHHByh3mYfSKCYUj01eUDVH8cvbzkVLpQjxAEiji7ma6wOG0mJ6W9qlIgNPm_dmzbCuT19GQKTgvll/pub?gid=1304594210&single=true&output=csv";
 const DATA = {"lotes": [["Lau_2s", "AGBA", "Launania", "Maiz tardio", "Soja", null, 4.7], ["AL_12", "AL", "Auca_Loo", "Maiz", "Soja", 52, 6], ["AL_1bN", "AL", "Auca_Loo", "Maiz tardio", "Soja", null, null], ["AL_2a", "AL", "Auca_Loo", "Maiz", "Maiz 2da", 52, 6], ["AL_4", "AL", "Auca_Loo", "Maiz tardio", "Pastura", null, null], ["AL_6", "AL", "Auca_Loo", "Maiz", "Maiz tardio", 52, 6], ["AL_7", "AL", "Auca_Loo", "Maiz", "Maiz Silo", 52, 6], ["E_1", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_3-4-5", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_9", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["DM_1-2-3-4", "C4", "Don_Manuel", "Maiz tardio", "Maiz Silo 2da", 52.5, 4], ["Fossa_1", "C4", "Fossati", "Maiz", "Soja 2da", 52.5, 4.5], ["Fossa_2", "C4", "Fossati", "Maiz tardio", "Natural", null, 6], ["LCh_02", "C4", "Los_Chañares", "Maiz", "Soja", 52.5, 6.8], ["LCh_14", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_15", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_17b", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_18", "C4", "Los_Chañares", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_20", "C4", "Los_Chañares", "Maiz", "Pastura", 52.5, 5.5], ["SJo_18a", "C4", "San_José_RGB", "Maiz tardio", "Maiz Silo 2da", 52.5, 6], ["SJo_6", "C4", "San_José_RGB", "Maiz", "Maiz Silo 2da", 52.5, 4.5], ["Sjo_8b", "C4", "San_José_RGB", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["SMta_04_s", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 5], ["SMta_07", "C4", "Santa_Margarita", "Maiz tardio", "Soja 2da", null, 4.5], ["SMta_15", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_17", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_1_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_2-3_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_20", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", null, 6.8], ["SMta_23n", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", 52.5, 5], ["LCol_2", "Doña Julia", "La_Colonia", "Maiz tardio", "Soja 2da", null, null], ["LCol_4", "Doña Julia", "La_Colonia", "Maiz", "Soja 2da", null, null], ["LD_9", "Doña Julia", "La_Delfina", "Maiz tardio", "Soja 2da", null, null], ["LT_1-2-3", "Doña Julia", "La_Travesia", "Maiz", "Soja 2da", null, null], ["LAl_2-3", "Doña Julia", "Los_Alamos", "Maiz", "Soja 2da", null, null], ["SF_1", "Doña Julia", "San_Faustino", "Maiz", "Soja 2da", null, null], ["SF_2", "Doña Julia", "San_Faustino", "Maiz tardio", "Soja", null, null], ["SP_3", "Doña Julia", "San_Pedro", "Maiz tardio", "Soja", null, null], ["LMgd_4", "ECSRL", "La_Magdalena", "Maiz tardio", "Soja 2da", null, 4.5], ["SPe_1", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_2", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_5b", "ECSRL", "San_Pedro", "Maiz tardio", "Soja", null, 4], ["DA_11", "ENT", "Don_Angel", "Maiz", "Soja", 70, 4.5], ["DA_2", "ENT", "Don_Angel", "Maiz tardio", "Soja 2da", null, null], ["DA_5", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["DA_7", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["LS_4", "ENT", "La_Sofía", "Maiz tardio", "Soja", 70, 6.8], ["LS_6", "ENT", "La_Sofía", "Maiz tardio", "Soja", null, null], ["LC_2", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["LC_4", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", 70, 6.8], ["LC_5", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["VIt_9", "ENT", "Villa_Itatí", "Maiz", "Soja", 70, 6.8], ["ECa_4a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["ECa_6a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["LAlc_11", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_12", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_13", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_14", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_4", "JMP", "La_Alcira", "Maiz tardio", "Cultivo de Servicio", null, null], ["SCa_3b", "JMP", "Santa_Candida", "Maiz tardio", "Soja 2da", null, null], ["LProv_6", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LProv_7", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LPP_1", "LPP", "Las_Pocas_Plumas", "Maiz", "Soja", 52.5, 6.9], ["LRM_1", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Soja 2da", 52.5, 6], ["LRM_6y11", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Girasol", 52.5, 6.5], ["LRM_8y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["LRM_9y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["DP_15B", "La Susana", "Don_Paco", "Maiz", "Soja", null, null], ["DP_16", "La Susana", "Don_Paco", "Maiz tardio", "Soja", null, null], ["LSu_1SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_2SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SB", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SC", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LHe_1a", "Ment", "La_Helena", "Maiz tardio", "Cultivo de Servicio", 52.5, 4.5], ["LHe_9b-10-encierre", "Ment", "La_Helena", "Maiz tardio", "Soja", 52.5, 6.8], ["LJunta_2A", "PAMPAS-FL", "LA_JUNTA", "Maiz tardio", "Soja", null, null], ["Lmaria_12N", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_14", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_19", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_6", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Be_3", "RLG", "Beneitez", "Maiz", "Girasol", 70, 4.8], ["EQ_13", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["EQ_14", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["LU_1-12-13-14", "RLG", "La_Union", "Maiz", "Soja", 70, 4.5], ["LU_8-9-10-11", "RLG", "La_Union", "Maiz", "Soja", 70, 6.8], ["Lam_1y2", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Lam_4", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Mila_3-4-5-6-7", "RLG", "Milanese", "Maiz tardio", "Soja 2da", null, null], ["13_Jun_4", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_5", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_6", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_7", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["13_Jun_9", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["Ald_1y2", "RyJLC", "Alday", "Maiz", "Soja", 52.5, 5.2], ["Aye_14", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_17", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_3y4", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_7", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_8a", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Beth_2", "RyJLC", "Bethuart", "Maiz", "Maiz Silo 2da", 52.5, 6.8], ["Bo_7", "RyJLC", "Bonanza", "Maiz", "Maiz Silo 2da", 52.5, 4.7], ["Bo_8y9", "RyJLC", "Bonanza", "Maiz", "Soja", 52.5, 4.7], ["DG_16a", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_18", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_5", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DLu_1y2", "RyJLC", "Don_Lui", "Maiz tardio", "Cultivo de Servicio", 52.5, 6], ["EAm_1", "RyJLC", "El_Amanecer", "Maiz", "Soja", 52.5, 6], ["EA_1-2-3-4", "RyJLC", "El_Anochecer", "Maiz", "Soja", 52.5, 4.7], ["ECo_1", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_2", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Pastoreo", 52.5, 6], ["ECo_3", "RyJLC", "El_Coco", "Maiz tardio", "Maiz Silo Tardio", 52.5, 6], ["ECo_4a", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_4b", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ECo_5", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ELG_10", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_4", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja 2da", 52.5, 6], ["ELG_5", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja", 52.5, 6.8], ["ELG_7", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja", 52.5, 6.8], ["ELG_8", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_9a", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6], ["LA_1a", "RyJLC", "La_Alegría", "Maiz", "Soja", 52.5, 5.2], ["LAP_2b", "RyJLC", "La_Alegría_Puesto", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_8", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_9", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["LP_12", "RyJLC", "La_Ponderosa", "Maiz", "Soja", 52.5, 6.8], ["LP_5", "RyJLC", "La_Ponderosa", "Maiz tardio", "Natural", 52.5, 6], ["SBe_8b", "RyJLC", "San_Benito", "Maiz", "Maiz Silo 2da", 52.5, 6], ["SJul_7a", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_7b", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_8", "RyJLC", "San_Julio", "Maiz", "Soja 2da", 52.5, 5.2], ["SJul_9", "RyJLC", "San_Julio", "Maiz", "Soja", 52.5, 6.8], ["SRi_26y27", "RyJLC", "San_Ricardo", "Maiz", "Soja", 52.5, 6], ["DJa_1", "SS", "Don_Javier", "Maiz tardio", "Soja", null, null], ["Mo_1", "SS", "El_Moro", "Maiz tardio", "Maiz", null, null], ["ER_1y2", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["ER_9y10", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["MF_11-13-Rome", "SS", "Martín_Fierro", "Maiz", "Soja", 70, 6.2], ["MF_17", "SS", "Martín_Fierro", "Maiz tardio", "Soja", 70, null], ["FNC-FNG-FO", "SS", "San_Silvestre", "Maiz", "Soja", 70, 5.8], ["FS", "SS", "San_Silvestre", "Maiz tardio", "Pastura", 70, null], ["SS_1", "SS", "San_Silvestre", "Maiz tardio", "Pastura", null, null], ["SS_C4ayb", "SS", "San_Silvestre", "Maiz", "Soja 2da", 70, 6], ["SS_C4c", "SS", "San_Silvestre", "Maiz", "Maiz 2da", 70, 5.8], ["Damb_T5", "TAS", "Dambrosio", "Maiz", "Soja", 52.5, 6], ["Damb_T6", "TAS", "Dambrosio", "Maiz tardio", "Soja", 52.5, 6], ["EF_n", "TAS", "El_Facundo", "Maiz tardio", "Cultivo de Servicio", null, 4.5], ["EF_s", "TAS", "El_Facundo", "Maiz", "Soja", 52.5, 4.5], ["LBo_14", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 5.8], ["LBo_2", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 4], ["LBo_4", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_5", "TAS", "La_Boya", "Maiz", "Maiz Silo Tardio", 52.5, 6.5], ["LBo_7", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_8a", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, null], ["LBo_9a", "TAS", "La_Boya", "Maiz tardio", "Pastura", 52.5, 6], ["LLu_3r", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.8], ["LLu_5", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.5], ["LCor_1", "TAS", "Las_Corridas", "Maiz tardio", "Verdeo de Invierno", 52.5, 5.8], ["LU_8-9-10-11 Cos", "UAP", "La_Union", "Maiz", "Soja", 70, 6.8]], "ambientes": [["L3", "L3 (>80% arena)"], ["L2", "L2 (70-80% arena)"], ["L1", "L1 (<70% arena)"], ["ML3", "ML 3 (>80% arena)"], ["ML2", "ML 2 (70-80% arena)"], ["ML1", "ML 1 (<70% arena)"], ["ML-T", "ML-T (tapto < 60 cm)"], ["B-T1", "B-T1 (tapto <60 cm)"], ["B-T2", "B-T2 (tapto <60 + CaCo3)"], ["B-T3", "B-T3 (tapto <60 + >8ph)"], ["B-Ts1", "B-Ts1 (tosca 60-120cm)"], ["B-Ts2", "B-Ts2 (tosca <60cm)"], ["ML-Ts1", "ML-Ts1 (tosca 60-120cm)"], ["ML-Ts2", "ML-Ts2 (tosca <60cm)"], ["L1-Ts1", "L1-Ts1 (tosca 60-120cm)"], ["L1-Ts2", "L1-Ts2 (tosca <60cm)"], ["B1", "B1 (>3% MO)"], ["B2", "B2 (<3% MO)"], ["B3", "B3 (> 8ph)"]], "antecesores": ["Arveja", "Avena", "Camelina", "Cebada", "Cebada Silo", "Centeno", "Cultivo de Servicio", "Garbanzo", "Girasol", "Inundación", "Maiz", "Maiz tardio", "Maiz 2da", "Maíz Pastoreo", "Maiz Silo", "Maiz Silo Tardio", "Maiz Silo 2da", "Maní", "Natural", "Papa", "Pasto Llorón", "Pastura", "Soja", "Soja 2da", "Sorgo", "Sorgo Pastoreo", "Sorgo Silo", "Trigo", "Trigo Silo", "Verdeo de Invierno", "Verdeo de Verano", "Triticale Silo", "Centeno Silo", "Vicia + Graminea silo"]};
 const $ = s => document.querySelector(s);
 const KEY = "implantacion.v1";
@@ -355,7 +366,7 @@ let db = { evals: [], cfg: { nPl: 15, nSur: 6, tec: "" }, lotes: null, lotesFech
 function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("¡No se pudo guardar! Exportá los datos ahora."); } }
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2]
+const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
 
 /* ---------------- números dictados ---------------- */
 const W = {cero:[0,"u"],un:[1,"u"],uno:[1,"u"],una:[1,"u"],dos:[2,"u"],tres:[3,"u"],cuatro:[4,"u"],cinco:[5,"u"],seis:[6,"u"],siete:[7,"u"],ocho:[8,"u"],nueve:[9,"u"],
@@ -486,21 +497,29 @@ function renderHome(){
 }
 $("#btnNew").onclick = () => {
   cur = { id: uid(), creado: Date.now(), actualizado: Date.now(), exportado: null, fecha: today(), tecnico: db.cfg.tec||"",
-    cultivo:"Maíz", lote:"", empresa:"", campo:"", ambiente:"", ef:"", antecesor:"", contratista:"", sembradora:"", esp:"", dens:"",
+    cultivo:"Maíz", lote:"", empresa:"", campo:"", ambiente:"", ef:"", antecesor:"", contratista:"", sembradora:"", genetica:"", esp:"", dens:"",
     lat:null, lon:null, prec:null, obs:"", surcos: Array.from({length: db.cfg.nSur}, (_,i)=>({n:i+1, sector:"", texto:""})) };
   db.evals.push(cur); curS = 0; save();
   show("eval"); fillEval(); setTimeout(()=>$("#iLote").focus(),50);
 };
 
 /* ---------------- datos de la evaluación ---------------- */
-const F = {iLote:"lote",iEmpresa:"empresa",iCampo:"campo",iCultivo:"cultivo",iAmb:"ambiente",iFecha:"fecha",iEF:"ef",iAnt:"antecesor",iContr:"contratista",iSemb:"sembradora",iEsp:"esp",iDens:"dens",iTec:"tecnico",iObs:"obs"};
+const F = {iLote:"lote",iEmpresa:"empresa",iCampo:"campo",iCultivo:"cultivo",iAmb:"ambiente",iFecha:"fecha",iEF:"ef",iAnt:"antecesor",iContr:"contratista",iSemb:"sembradora",iGen:"genetica",iEsp:"esp",iDens:"dens",iTec:"tecnico",iObs:"obs"};
 function fillLists(){
-  $("#iAmb").innerHTML = `<option value="">Lote completo</option>` + DATA.ambientes.map(a=>`<option value="${esc(a[0])}">${esc(a[1])}</option>`).join("");
+  const l = loteActual(), enL = l && l[7] ? Object.keys(l[7]) : [];
+  const lab = c => (DATA.ambientes.find(a=>a[0]===c)||[c,c])[1];
+  const opt = c => `<option value="${esc(c)}">${esc(lab(c))}</option>`;
+  const resto = DATA.ambientes.map(a=>a[0]).filter(c=>!enL.includes(c));
+  if(cur && cur.ambiente && !enL.includes(cur.ambiente) && !resto.includes(cur.ambiente)) resto.push(cur.ambiente);
+  $("#iAmb").innerHTML = `<option value="">Lote completo</option>` +
+    (enL.length ? `<optgroup label="En la planilla para este lote">${enL.map(opt).join("")}</optgroup><optgroup label="Otros ambientes">${resto.map(opt).join("")}</optgroup>` : resto.map(opt).join(""));
   $("#dlAnt").innerHTML = DATA.antecesores.map(a=>`<option value="${esc(a)}">`).join("");
   $("#dlEF").innerHTML = ["VE","V1","V2","V3","V4","V5","V6","V7","V8","V10","V12"].map(a=>`<option value="${a}">`).join("");
   const uniq = k => [...new Set(db.evals.map(e=>e[k]).filter(Boolean))];
   $("#dlContr").innerHTML = uniq("contratista").map(a=>`<option value="${esc(a)}">`).join("");
   $("#dlSemb").innerHTML = uniq("sembradora").map(a=>`<option value="${esc(a)}">`).join("");
+  const gens = [...new Set([...lotes().flatMap(x=>[x[8], ...Object.values(x[7]||{}).map(v=>v.g)]), ...uniq("genetica")].filter(Boolean))].sort();
+  $("#dlGen").innerHTML = gens.map(a=>`<option value="${esc(a)}">`).join("");
 }
 function fillEval(){
   fillLists();
@@ -509,6 +528,13 @@ function fillEval(){
   $("#gpsTxt").textContent = cur.lat!=null ? `Ubicación: ${cur.lat.toFixed(5)}, ${cur.lon.toFixed(5)} (±${Math.round(cur.prec)} m)` : "El GPS funciona sin señal de datos.";
   $("#btnDel").hidden = false; $("#btnDel").textContent = "Eliminar evaluación"; delArm=false;
   $("#evErr").hidden = true; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
+  bloqueo();
+}
+// hasta que no se elija un lote de la lista, el resto del formulario queda bloqueado
+const loteOk = () => !!(cur && cur.lote && cur.empresa);   // empresa y campo solo salen de la lista
+function bloqueo(){
+  const ok = loteOk();
+  document.querySelectorAll("#v-eval .grid input, #v-eval .grid select, #v-eval .grid textarea, #btnGPS").forEach(x=>{ if(x.id!=="iLote") x.disabled=!ok; });
 }
 for(const [id,k] of Object.entries(F)){
   $("#"+id).addEventListener("input", e=>{ if(!cur) return; cur[k] = e.target.value; cur.actualizado = Date.now(); cur.exportado = null; save();
@@ -530,18 +556,32 @@ $("#iLote").addEventListener("input", ()=>{
   S.hidden=false;
   S.querySelectorAll("button").forEach(b=>b.onmousedown=b.ontouchstart=ev=>{ ev.preventDefault(); pickLote(lotes()[+b.dataset.i]); });
 });
-$("#iLote").addEventListener("blur", ()=>setTimeout(()=>$("#sugs").hidden=true,150));
+$("#iLote").addEventListener("input", ()=>{ if(!cur) return; const l=loteActual();
+  if(!l && (cur.empresa||cur.campo)){ cur.empresa=""; cur.campo=""; $("#iEmpresa").value=""; $("#iCampo").value=""; save(); }
+  bloqueo(); });
+$("#iLote").addEventListener("blur", ()=>setTimeout(()=>{ $("#sugs").hidden=true;
+  if(!cur || (cur.empresa && loteActual())) return;
+  const t=(cur.lote||"").trim().toLowerCase(); if(!t) return;
+  const m=lotes().filter(l=>l[0].toLowerCase()===t);
+  if(m.length===1) pickLote(m[0]);
+  else if(m.length>1) toast("Hay más de un lote con ese nombre: elegilo de la lista para saber de qué campo es.",4500);
+  else toast("Ese lote no está en la planilla. Elegilo de la lista (si es nuevo, agregalo a la planilla y actualizá la lista).",5000);
+},180));
 function pickLote(l){
   cur.lote=l[0]; cur.empresa=l[1]; cur.campo=l[2]; cur.cultivo=cultivoDe(l[3]); cur.antecesor=l[4]||cur.antecesor;
   if(l[5]) cur.esp = String(l[5]).replace(".",",");
   if(l[6]) cur.dens = String(Math.round(l[6]*10000));
-  cur.actualizado=Date.now(); save(); fillEval(); $("#sugs").hidden=true;
+  if(l[8]) cur.genetica = l[8];
+  const ambs = l[7] ? Object.keys(l[7]) : [];
+  if(ambs.length===1 && !cur.ambiente) cur.ambiente = ambs[0];
+  cur.actualizado=Date.now(); save(); fillEval(); $("#sugs").hidden=true; datosAmbiente(false);
   $("#ttl").textContent = cur.lote + (cur.ambiente?" · "+cur.ambiente:"");
-  toast("Datos del lote cargados. Revisá la densidad del ambiente.");
+  const nd = new Set(ambs.map(a=>l[7][a].d).filter(x=>x!=null)).size;
+  toast(nd>1 && !cur.ambiente ? "Datos del lote cargados. La densidad cambia según el ambiente: elegí el ambiente." : "Datos del lote cargados. Podés corregir lo que haga falta.");
 }
 function validEval(){
   const errs=[]; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
-  if(!cur.lote.trim()){ errs.push("el lote"); $("#fLote").classList.add("err"); }
+  if(!loteOk()){ errs.push("el lote (elegilo de la lista)"); $("#fLote").classList.add("err"); }
   const e=num(cur.esp), d=num(cur.dens);
   if(!(e>=15&&e<=120)){ errs.push("el espaciamiento entre surcos (cm)"); $("#fEsp").classList.add("err"); }
   if(!(d>=10000&&d<=200000)){ errs.push("la densidad de siembra en semillas por hectárea (ej. 60000)"); $("#fDens").classList.add("err"); }
@@ -919,7 +959,7 @@ function renderRes(){
     : `<tr><td>${i+1}</td><td colspan="7" style="text-align:left;color:var(--warn)">${r.n?`incompleto (${r.n}/${db.cfg.nPl})`:"sin datos"}</td></tr>`; });
   t += `</tbody><tfoot><tr><td>Promedio</td><td>${f0(R.plha)}</td><td>${f1(R.media)}</td><td>${f1(R.desv)}</td><td>${fp(R.cv)}</td><td>${fp(R.dob)}</td><td>${fp(R.fal)}</td><td>${fp(R.unif)}</td></tr></tfoot>`;
   $("#rTbl").innerHTML = t;
-  const kv = [["Empresa",ev.empresa],["Antecesor",ev.antecesor],["Contratista",ev.contratista],["Sembradora",ev.sembradora],["Espaciamiento",ev.esp?String(ev.esp).replace(".",",")+" cm":""],["Densidad",ev.dens?f0(num(ev.dens))+" sem/ha":""],["Técnico",ev.tecnico],["GPS",ev.lat!=null?`${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)}`:""],["Observaciones",ev.obs]];
+  const kv = [["Empresa",ev.empresa],["Antecesor",ev.antecesor],["Contratista",ev.contratista],["Sembradora",ev.sembradora],["Genética",ev.genetica],["Espaciamiento",ev.esp?String(ev.esp).replace(".",",")+" cm":""],["Densidad",ev.dens?f0(num(ev.dens))+" sem/ha":""],["Técnico",ev.tecnico],["GPS",ev.lat!=null?`${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)}`:""],["Observaciones",ev.obs]];
   $("#rKv").innerHTML = kv.filter(k=>k[1]).map(k=>`<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join("");
 }
 
@@ -929,8 +969,8 @@ function csvCell(v){ v = v==null ? "" : String(v); return /[";\n\r]/.test(v) ? `
 function toCSV(rows){ return "﻿" + rows.map(r=>r.map(csvCell).join(";")).join("\r\n"); }
 function buildExport(evs){
   const n = db.cfg.nPl;
-  const head = ["ID_Evaluacion","Fecha","Tecnico","Empresa","Campo","Lote","Cultivo","Ambiente","Estado_fenologico","Antecesor","Contratista","Sembradora","Espaciamiento_cm","Densidad_siembra","Latitud","Longitud","Observaciones"];
-  const hv = ev => [ev.id, fmtFecha(ev.fecha), ev.tecnico, ev.empresa, ev.campo, ev.lote, ev.cultivo, ev.ambiente, ev.ef, ev.antecesor, ev.contratista, ev.sembradora, dec(num(ev.esp)), dec(num(ev.dens)), dec(ev.lat), dec(ev.lon), ev.obs];
+  const head = ["ID_Evaluacion","Fecha","Tecnico","Empresa","Campo","Lote","Cultivo","Ambiente","Estado_fenologico","Antecesor","Contratista","Sembradora","Espaciamiento_cm","Densidad_siembra","Latitud","Longitud","Observaciones","Genetica"];
+  const hv = ev => [ev.id, fmtFecha(ev.fecha), ev.tecnico, ev.empresa, ev.campo, ev.lote, ev.cultivo, ev.ambiente, ev.ef, ev.antecesor, ev.contratista, ev.sembradora, dec(num(ev.esp)), dec(num(ev.dens)), dec(ev.lat), dec(ev.lon), ev.obs, ev.genetica||""];
   const D = Array.from({length:n},(_,i)=>"D"+String(i+1).padStart(2,"0"));
   const s = [[...head,"Surco","Sector",...D,"Estado","Dist_media","Plantas_ha","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
   const r = [[...head,"Surcos_completos","Plantas_ha","Pct_logro","Dist_media","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
@@ -962,10 +1002,11 @@ $("#btnExpAll").onclick = () => doExport(true);
 /* ---------------- ajustes ---------------- */
 function renderCfg(){
   $("#cPl").value = db.cfg.nPl; $("#cSur").value = db.cfg.nSur; $("#cTec").value = db.cfg.tec||"";
-  $("#lotesInfo").textContent = `${lotes().length} lotes cargados${db.lotesFecha?` (actualizada el ${new Date(db.lotesFecha).toLocaleDateString("es-AR")})`:" (lista original de la planilla 25-26)"}.`;
+  $("#lotesInfo").textContent = `${lotes().length} lotes cargados${db.lotesFecha?` (${db.lotesOrigen==="planilla"?"bajada de la planilla":"desde CSV"} el ${new Date(db.lotesFecha).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})})`:" (lista original de la planilla 25-26)"}.`;
   $("#verInfo").textContent = `Versión ${VERSION} · ${db.evals.length} evaluaciones guardadas en este celular.`;
   renderVoz();
   $("#cUrl").value = db.cfg.url || "";
+  $("#cLotesUrl").value = db.cfg.lotesUrl ?? LOTES_CSV_URL;
 }
 function readCfg(){
   const p=parseInt($("#cPl").value,10), s=parseInt($("#cSur").value,10);
@@ -975,17 +1016,9 @@ function readCfg(){
 $("#fLotes").onchange = async e => {
   const f=e.target.files[0]; if(!f) return;
   try{
-    const txt = await f.text(); const sep = (txt.split("\n")[0].match(/;/g)||[]).length >= (txt.split("\n")[0].match(/,/g)||[]).length ? ";" : ",";
-    const rows = txt.replace(/^﻿/,"").split(/\r?\n/).filter(l=>l.trim()).map(l=>l.split(sep).map(c=>c.replace(/^"|"$/g,"").trim()));
-    const h = rows[0].map(x=>x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""));
-    const ix = k => h.findIndex(x=>x.startsWith(k));
-    const iL=ix("lote"), iE=ix("empresa"), iC=ix("campo"), iCu=ix("cultivo"), iA=ix("antecesor"), iEs=ix("espaciamiento"), iD=ix("densidad");
-    if(iL<0) throw 0;
-    const n = v => { const x=parseFloat(String(v||"").replace(",",".")); return isFinite(x)?x:null; };
-    const L = rows.slice(1).filter(r=>r[iL]).map(r=>[r[iL], r[iE]||"", r[iC]||"", r[iCu]||"", r[iA]||"", n(r[iEs]), n(r[iD])]);
-    if(!L.length) throw 0;
-    db.lotes=L; db.lotesFecha=Date.now(); save(); renderCfg(); toast(`${L.length} lotes cargados`);
-  }catch(err){ toast("No se pudo leer el archivo. Tiene que ser CSV con una columna “Lote”.",5000); }
+    const L = lotesDeCSV(await f.text());
+    db.lotes=L; db.lotesFecha=Date.now(); db.lotesOrigen="csv"; save(); renderCfg(); toast(`${L.length} lotes cargados`);
+  }catch(err){ toast("No se pudo leer el archivo: "+(err.message||"tiene que ser CSV con una columna “Lote”."),5000); }
   e.target.value="";
 };
 $("#fBackup").onchange = async e => {
@@ -1016,7 +1049,7 @@ function campania(f){ if(!f) return ""; const y=+f.slice(0,4), m=+f.slice(5,7); 
 function payload(ev){
   const R = evalCalc(ev), n = db.cfg.nPl;
   const base = { ID_Evaluacion: ev.id, Fecha: ev.fecha, Campania: campania(ev.fecha), Tecnico: ev.tecnico, Empresa: ev.empresa, Campo: ev.campo, Lote: ev.lote,
-    Cultivo: ev.cultivo, Ambiente: ev.ambiente, Estado_fenologico: ev.ef, Antecesor: ev.antecesor, Contratista: ev.contratista, Sembradora: ev.sembradora,
+    Cultivo: ev.cultivo, Ambiente: ev.ambiente, Estado_fenologico: ev.ef, Antecesor: ev.antecesor, Contratista: ev.contratista, Sembradora: ev.sembradora, Genetica: ev.genetica||"",
     Espaciamiento_cm: r6(num(ev.esp)), Densidad_siembra: r6(num(ev.dens)) };
   const evaluacion = Object.assign({}, base, { Latitud: r6(ev.lat), Longitud: r6(ev.lon), Observaciones: ev.obs,
     Surcos_completos: R.nOk, Plantas_ha: r6(R.plha), Pct_logro: r6(R.logro), Dist_media: r6(R.media), Desvio: r6(R.desv), CV: r6(R.cv),
@@ -1078,7 +1111,7 @@ $("#btnTestUrl").onclick = async () => {
   if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)){ toast("La dirección tiene que empezar con https://script.google.com/…",5000); return; }
   if(!navigator.onLine){ toast("Necesitás señal para probar la conexión."); return; }
   $("#urlInfo").textContent = "Probando…";
-  try{ const r = await fetch(url); const j = await r.json(); if(!j.ok) throw 0; $("#urlInfo").textContent = "✓ Conexión correcta con la planilla."; sync(true); }
+  try{ const r = await fetch(url); const j = await r.json(); if(!j.ok) throw 0; $("#urlInfo").textContent = "✓ Conexión correcta con la planilla."; sync(true); bajarLotes(true); }
   catch(e){ $("#urlInfo").textContent = "No responde. Revisá que copiaste la dirección completa (termina en /exec) y que el acceso sea “Cualquier usuario”."; }
 };
 $("#cUrl").addEventListener("change", e => { db.cfg.url = e.target.value.trim(); db.cfg.errEnvio=""; save(); sync(false); });
@@ -1087,8 +1120,100 @@ addEventListener("online", () => setTimeout(()=>sync(false), 1500));
 document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible") sync(false); });
 setInterval(() => { if(document.visibilityState==="visible") sync(false); }, 120000);
 
+/* ---------------- lista de lotes desde la planilla (CSV publicado) ---------------- */
+// Hoja con una fila por lote y ambiente: EMPRESA | Campo | Lote | Ambiente | Cultivo | Antecesor | Espaciamiento (cm) | Densidad (pl/m² o sem/ha)
+// Se guarda un lote por Empresa+Campo+Lote: [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens, {ambiente: dens}]
+let bajandoLotes=false;
+function csvFilas(txt){
+  txt = txt.replace(/^﻿/,"");
+  const l1 = txt.slice(0, txt.indexOf("\n")>0?txt.indexOf("\n"):txt.length);
+  const sep = (l1.match(/;/g)||[]).length > (l1.match(/,/g)||[]).length ? ";" : ",";
+  const rows=[]; let row=[], c="", q=false;
+  for(let i=0;i<txt.length;i++){ const ch=txt[i];
+    if(q){ if(ch==='"'){ if(txt[i+1]==='"'){ c+='"'; i++; } else q=false; } else c+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===sep){ row.push(c.trim()); c=""; }
+    else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&txt[i+1]==="\n") i++; row.push(c.trim()); c=""; if(row.some(x=>x)) rows.push(row); row=[]; }
+    else c+=ch; }
+  row.push(c.trim()); if(row.some(x=>x)) rows.push(row);
+  return rows;
+}
+const ambCodigo = v => {   // "ML 2 (70-80% arena)" o "ML2" → "ML2"
+  const k = x => String(x||"").split("(")[0].toLowerCase().replace(/[^a-z0-9]/g,"");
+  const a = DATA.ambientes.find(a => k(a[0])===k(v) || k(a[1])===k(v)); return a ? a[0] : "";
+};
+function lotesDeCSV(txt){
+  const rows = csvFilas(txt); if(rows.length<2) throw new Error("la hoja está vacía");
+  const h = rows[0].map(x=>x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim());
+  const ix = k => h.findIndex(x=>x.startsWith(k));
+  const iL=ix("lote"), iE=ix("empresa"), iC=ix("campo"), iAm=ix("ambiente"), iCu=ix("cultivo"), iA=ix("antecesor"), iEs=ix("espaciamiento"), iD=ix("densidad");
+  const iG=[ix("genetica"),ix("hibrido"),ix("variedad"),ix("material")].find(i=>i>=0) ?? -1;
+  if(iL<0) throw new Error("no tiene columna “Lote”");
+  const n = v => { let t=String(v??"").trim().replace(/\s/g,"");   // "6,8" · "6.8" · "68.000" · "68000"
+    t = t.includes(",") ? t.replace(/\./g,"").replace(",",".") : (/^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g,"") : t);
+    const x=parseFloat(t); return isFinite(x)&&x>0?x:null; };
+  const nEsp = n;
+  const dm2 = v => { const x=n(v); return x==null?null:(x>1000? x/10000 : x); };   // sem/ha → pl/m²
+  const g = (r,i) => i<0 ? "" : (r[i]||"").trim();
+  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || x.includes("maiz") || x.includes("giras"); };
+  const por = new Map(), L = [];
+  for(const r of rows.slice(1)){
+    const lote=g(r,iL); if(!lote || !cultivoOk(g(r,iCu))) continue;
+    const key=[g(r,iE),g(r,iC),lote].join("|").toLowerCase();
+    let l = por.get(key);
+    if(!l){ l=[lote, g(r,iE), g(r,iC), g(r,iCu), g(r,iA), null, null, {}, ""]; por.set(key,l); L.push(l); }
+    if(l[5]==null) l[5]=nEsp(g(r,iEs));
+    const d=dm2(g(r,iD)), gen=g(r,iG);
+    if(l[6]==null && d!=null) l[6]=d;
+    if(!l[8] && gen) l[8]=gen;
+    const amTxt=g(r,iAm), am=ambCodigo(amTxt) || amTxt;
+    if(am){ const a = l[7][am] || (l[7][am]={d:null,g:""}); if(a.d==null) a.d=d; if(!a.g) a.g=gen; }
+  }
+  if(!L.length) throw new Error("no hay lotes de maíz o girasol");
+  return L;
+}
+async function bajarLotes(manual){
+  const url=(db.cfg.lotesUrl ?? LOTES_CSV_URL).trim();
+  if(!url){ if(manual) toast("Primero cargá la dirección de la lista."); return; }
+  if(!navigator.onLine){ if(manual) toast("Necesitás señal para actualizar la lista."); return; }
+  if(bajandoLotes) return; bajandoLotes=true;
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
+    const r=await fetch(url,{signal:ctl.signal,cache:"no-store"}); clearTimeout(to);
+    if(!r.ok) throw new Error("la planilla respondió con error "+r.status);
+    const txt=await r.text();
+    if(/^\s*</.test(txt)) throw new Error("la dirección no es un CSV publicado");
+    const L=lotesDeCSV(txt);
+    db.lotes=L; db.lotesFecha=Date.now(); db.lotesOrigen="planilla"; save();
+    if(view==="cfg") renderCfg();
+    if(manual) toast(`✓ ${L.length} lotes actualizados desde la planilla`);
+  }catch(e){ if(manual) toast("No se pudo bajar la lista: "+(e.name==="AbortError"?"la señal es muy débil":(e.message||"revisá la dirección")),5000); }
+  bajandoLotes=false;
+}
+$("#btnLotes").onclick = () => { db.cfg.lotesUrl=$("#cLotesUrl").value.trim(); save(); bajarLotes(true); };
+$("#cLotesUrl").addEventListener("change", e => { db.cfg.lotesUrl=e.target.value.trim(); save(); });
+// automático: al abrir, al volver a la app y al recuperar señal (como mucho cada 30 min)
+const lotesViejos = () => db.lotesOrigen!=="planilla" || !db.lotesFecha || Date.now()-db.lotesFecha > 30*60*1000;
+addEventListener("online", () => { if(lotesViejos()) setTimeout(()=>bajarLotes(false), 3000); });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible" && lotesViejos()) bajarLotes(false); });
+
+// densidad según el ambiente elegido (si la planilla la tiene por ambiente)
+function loteActual(){ if(!cur || !cur.lote) return null;
+  return lotes().find(l => l[0]===cur.lote && (!cur.campo || l[2]===cur.campo) && (!cur.empresa || l[1]===cur.empresa)) || null; }
+// al elegir ambiente: si está en la planilla para ese lote, trae su densidad y genética (después se pueden corregir)
+function datosAmbiente(avisar){
+  const l = loteActual(); if(!l || !cur.ambiente) return;
+  const a = l[7] && l[7][cur.ambiente];
+  if(!a){ if(avisar) toast("Ese ambiente no está en la planilla para este lote: revisá densidad y genética.",4500); return; }
+  if(a.d!=null){ cur.dens=String(Math.round(a.d*10000)); $("#iDens").value=cur.dens; }
+  if(a.g){ cur.genetica=a.g; $("#iGen").value=a.g; }
+  cur.actualizado=Date.now(); save();
+  if(avisar) toast(`Datos de ${cur.ambiente} cargados${a.d!=null?`: ${f0(+cur.dens)} sem/ha`:""}${a.g?` · ${a.g}`:""}`);
+}
+$("#iAmb").addEventListener("change", () => datosAmbiente(true));
+
 /* ---------------- arranque ---------------- */
-load(); net(); micHint(); renderHome(); show("home"); setTimeout(()=>sync(false), 1500);
+load(); net(); micHint(); renderHome(); show("home"); setTimeout(()=>sync(false), 1500); setTimeout(()=>bajarLotes(false), 2500);
 </script>
 </body>
 </html>
