@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recuentos de Implantación</title>
+<meta name="description" content="Registro a campo de distancias entre plantas (maíz y girasol), con dictado y funcionamiento sin señal.">
+<meta name="theme-color" content="#4E9A1C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Recuentos">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* Layout: una columna para celular; barra superior fija verde SOS Agro con marcas de cinta métrica; tarjetas solo para surcos y resultados. */
+:root{
+  --bg:#F3F4EF; --surface:#FFFFFF; --ink:#16190F; --muted:#596150; --line:#D6DACB;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#2F5D23;
+  --ok:#2E7D32; --warn:#A35F00; --bad:#C62828; --warn-bg:#FFF1D6; --bad-bg:#FDE3E1; --ok-bg:#E3F1E1;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#9CCB7F;
+  --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --warn-bg:#3A2C10; --bad-bg:#3D1A18; --ok-bg:#1D3220; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11130E; --surface:#1B1E17; --ink:#EDEFE6; --muted:#A3AA96; --line:#343A2C;
+  --tape:#4E9A1C; --tape-ink:#FFFFFF; --accent:#9CCB7F;
+  --ok:#78C27B; --warn:#F2A73A; --bad:#FF7A72; --warn-bg:#3A2C10; --bad-bg:#3D1A18; --ok-bg:#1D3220; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--font);-webkit-text-size-adjust:100%;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+
+/* barra superior */
+.top{position:sticky;top:0;z-index:20;background:var(--tape);color:var(--tape-ink);
+  padding:calc(env(safe-area-inset-top,0px) + 10px) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
+  display:flex;align-items:center;gap:10px;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 1px,transparent 1px 10px);
+  background-size:100% 7px;background-repeat:no-repeat;background-position:0 100%}
+.top h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.01em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .back{background:none;border:0;font-size:22px;line-height:1;padding:4px 8px 4px 0;cursor:pointer;color:inherit}
+.pill{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.2);white-space:nowrap}
+.pill.off{background:var(--tape-ink);color:var(--tape)}
+.top .logo{width:34px;height:34px;flex:none;display:block}
+.homelogo{display:block;width:min(220px,60%);height:auto;margin:4px auto 2px}
+.iconbtn{background:none;border:0;color:inherit;font-size:20px;padding:4px;cursor:pointer}
+
+main{padding:16px max(16px,env(safe-area-inset-right,0px)) 120px max(16px,env(safe-area-inset-left,0px));max-width:720px;margin:0 auto}
+section{display:flex;flex-direction:column;gap:14px}
+h2{font-size:20px;margin:6px 0 0;text-wrap:balance}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:10px 0 0;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* botones */
+.btn{appearance:none;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r);
+  padding:12px 16px;font-weight:650;cursor:pointer;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--tape);border-color:var(--tape);color:var(--tape-ink)}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.btn{flex:1 1 140px}
+
+/* formulario */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid .full{grid-column:1/-1}
+@media (max-width:420px){.grid{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:650;color:var(--muted);min-width:0}
+label.f input[readonly]{background:transparent;border-style:dashed;color:var(--ink)}
+label.f input:disabled,label.f select:disabled,label.f textarea:disabled,.full .btn:disabled{opacity:.4}
+label.f input,label.f select,label.f textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:11px 12px;font-size:16px;color:var(--ink);font-weight:500;min-height:48px;width:100%}
+label.f.err input{border-color:var(--bad)}
+.hint{font-size:12px;font-weight:500;color:var(--muted)}
+.lotewrap{position:relative}
+.sugs{position:absolute;left:0;right:0;top:100%;z-index:15;background:var(--surface);border:1.5px solid var(--line);border-radius:8px;margin-top:4px;max-height:300px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.sugs button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;cursor:pointer}
+.sugs button b{font-weight:700}
+.sugs button span{display:block;font-size:12px;color:var(--muted)}
+
+/* lista de evaluaciones */
+.list{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.item:last-child{border-bottom:0}
+.item .t{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .s{font-size:13px;color:var(--muted);grid-column:1}
+.item .k{grid-row:1/3;grid-column:2;align-self:center;text-align:right;font-size:13px}
+.item .k b{display:block;font-size:17px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:1px}
+.tag.pend{background:var(--warn-bg);color:var(--warn)}
+.tag.exp{background:var(--ok-bg);color:var(--ok)}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:var(--r)}
+
+/* surcos */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.tab{flex:0 0 auto;min-width:48px;height:48px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-weight:800;cursor:pointer;position:relative;padding:0 10px}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab::after{content:"";position:absolute;right:5px;top:5px;width:8px;height:8px;border-radius:50%;background:transparent}
+.tab.ok::after{background:var(--ok)}
+.tab.bad::after{background:var(--bad)}
+.tab.part::after{background:var(--warn)}
+.tab.add{font-weight:600;color:var(--muted)}
+.ctx{font-size:13px;color:var(--muted)}
+.dict{display:flex;flex-direction:column;gap:8px}
+.dict textarea{width:100%;min-height:92px;resize:vertical;border:2px solid var(--line);border-radius:var(--r);padding:12px;font-size:20px;line-height:1.35;background:var(--surface);font-family:var(--font);font-variant-numeric:tabular-nums}
+.dict textarea.listen{border-color:var(--tape);box-shadow:0 0 0 3px color-mix(in srgb,var(--tape) 35%,transparent)}
+.interim{font-size:15px;color:var(--muted);min-height:1.2em;font-style:italic}
+.mic{background:var(--tape);color:var(--tape-ink);border:0;border-radius:var(--r);min-height:56px;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;flex:2 1 130px}
+.mic.on{background:var(--bad);color:#fff}
+.mic svg{width:22px;height:22px}
+.status{padding:10px 12px;border-radius:8px;font-weight:650;font-size:14px}
+.status.ok{background:var(--ok-bg);color:var(--ok)}
+.status.bad{background:var(--bad-bg);color:var(--bad)}
+.status.part{background:var(--warn-bg);color:var(--warn)}
+.cells{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cell{border:1.5px solid var(--line);border-radius:8px;padding:5px 4px 6px;text-align:center;background:var(--surface);min-width:0}
+.cell .p{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.cell .v{font-size:18px;font-weight:750;font-variant-numeric:tabular-nums;line-height:1.15}
+.cell .d{font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.cell.empty{border-style:dashed;opacity:.6}
+.cell.dob{border-color:var(--warn);background:var(--warn-bg)} .cell.dob .d{color:var(--warn);font-weight:700}
+.cell.fal{border-color:var(--bad);background:var(--bad-bg)} .cell.fal .d{color:var(--bad);font-weight:700}
+.cell.inv{border-color:var(--bad);border-width:2.5px}
+.strip{width:100%;height:auto;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1.5px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--surface);padding:9px 10px;min-width:0}
+.stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.stat .n{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .n small{font-size:12px;font-weight:600;color:var(--muted)}
+.stat.big{grid-column:span 3}
+.stat.big .n{font-size:30px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* tabla resumen */
+.tblwrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+th:first-child,td:first-child{text-align:left}
+tfoot td{font-weight:800;border-bottom:0}
+
+.pad{position:fixed;left:0;right:0;bottom:0;z-index:19;background:var(--surface);border-top:2px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.14);
+  padding:10px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:8px}
+.padtop{display:flex;align-items:center;gap:12px;max-width:520px;width:100%;margin:0 auto}
+.padlbl{flex:1;min-width:0;font-size:15px;font-weight:800}
+.padprev{font-size:13px;font-weight:600;color:var(--muted)}
+.padnum{font-size:44px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1;min-width:4ch;text-align:right;padding:6px 12px;border:2px solid var(--line);border-radius:10px;background:var(--bg)}
+.padnum.err{color:var(--bad);border-color:var(--bad);animation:shake .25s}
+.padnum.okk{border-color:var(--ok)}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:520px;width:100%;margin:0 auto}
+.key{height:58px;font-size:30px;font-weight:750;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;font-variant-numeric:tabular-nums}
+.key:active{background:var(--line)}
+.key.del{font-size:26px}
+.key.ok{background:var(--tape);border-color:var(--tape);color:var(--tape-ink);font-size:19px;font-weight:850}
+.key.ok.next{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.padclose{background:none;border:0;color:var(--muted);font-weight:650;font-size:14px;padding:4px;cursor:pointer}
+body.padon main{padding-bottom:400px}
+body.padon .dict{display:none}
+body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
+@media (max-height:700px){.key{height:50px}.padnum{font-size:36px}}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:18;background:var(--surface);border-top:1.5px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:10px}
+.foot .btn{flex:1}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:10px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--tape);transition:width .2s}
+.banner{background:var(--warn-bg);color:var(--warn);border-radius:var(--r);padding:12px 14px;font-size:14px;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="back" id="btnBack" aria-label="Volver" hidden>←</button>
+  <img class="logo" src="logo-marca.png" alt="SOS Agro">
+  <h1 id="ttl">Recuentos de Implantación</h1>
+  <span class="pill" id="net">Con señal</span>
+  <button class="iconbtn" id="btnCfg" aria-label="Ajustes">⚙︎</button>
+</header>
+
+<main>
+<!-- INICIO -->
+<section id="v-home">
+  <img class="homelogo" src="logo.png" alt="SOS Agro">
+  <div class="banner" id="installBanner" hidden>
+    <span id="installTxt">Instalá la app en el celular para usarla sin señal.</span>
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="btnInstall" hidden>Instalar app</button></div>
+  </div>
+  <div class="banner" id="vozBanner" hidden>
+    Para dictar sin señal, descargá el dictado una vez con wifi (40 MB).
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="btnVozHome">Descargar dictado</button></div>
+  </div>
+  <button class="btn primary block" id="btnNew" style="min-height:58px;font-size:18px">+ Nueva evaluación</button>
+  <h3>Evaluaciones en este celular</h3>
+  <div id="evList"></div>
+  <h3>Planilla central</h3>
+  <p class="status" id="syncBox"></p>
+  <button class="btn dark" id="btnSync" hidden>Enviar ahora</button>
+  <h3>Respaldo manual</h3>
+  <p class="small muted" id="expInfo"></p>
+  <div class="row">
+    <button class="btn" id="btnExpPend">Exportar pendientes</button>
+    <button class="btn" id="btnExpAll">Exportar todo</button>
+  </div>
+  <p class="small muted">Genera dos planillas (surcos y resumen) para abrir con Excel, más un respaldo. Se comparten por WhatsApp, mail o Drive cuando haya señal.</p>
+</section>
+
+<!-- DATOS -->
+<section id="v-eval" hidden>
+  <h2 id="evTitle">Nueva evaluación</h2>
+  <div class="grid">
+    <label class="f full" id="fLote">Lote
+      <div class="lotewrap">
+        <input id="iLote" autocomplete="off" placeholder="Buscar lote o campo…" enterkeyhint="next">
+        <div class="sugs" id="sugs" hidden></div>
+      </div>
+      <span class="hint" id="loteHint">Primero elegí el lote de la lista: el resto se completa solo con los datos de la planilla. Después podés corregir ambiente, densidad, genética, etc.</span>
+    </label>
+    <label class="f">Empresa<input id="iEmpresa" readonly tabindex="-1" placeholder="sale del lote"></label>
+    <label class="f">Campo<input id="iCampo" readonly tabindex="-1" placeholder="sale del lote"></label>
+    <label class="f">Cultivo
+      <select id="iCultivo"><option>Maíz</option><option>Maíz tardío</option><option>Girasol</option></select></label>
+    <label class="f">Genética<input id="iGen" list="dlGen" placeholder="Híbrido"></label>
+    <label class="f">Ambiente / sitio
+      <select id="iAmb"></select></label>
+    <label class="f">Fecha<input type="date" id="iFecha"></label>
+    <label class="f">Estado fenológico<input id="iEF" list="dlEF" placeholder="V2"></label>
+    <label class="f full">Antecesor<input id="iAnt" list="dlAnt"></label>
+    <label class="f">Contratista<input id="iContr" list="dlContr"></label>
+    <label class="f">Sembradora<input id="iSemb" list="dlSemb"></label>
+    <label class="f" id="fEsp">Espaciamiento (cm)<input id="iEsp" inputmode="decimal" placeholder="52,5"></label>
+    <label class="f" id="fDens">Densidad de siembra (sem/ha)<input id="iDens" inputmode="numeric" placeholder="60000"></label>
+    <label class="f full">Técnico<input id="iTec" autocomplete="name"></label>
+    <div class="full">
+      <button class="btn block" id="btnGPS" type="button">📍 Registrar ubicación GPS</button>
+      <p class="hint" id="gpsTxt" style="margin-top:6px">El GPS funciona sin señal de datos.</p>
+    </div>
+    <label class="f full">Observaciones<textarea id="iObs" rows="3"></textarea></label>
+  </div>
+  <p class="status bad" id="evErr" hidden></p>
+  <button class="btn danger" id="btnDel" hidden>Eliminar evaluación</button>
+</section>
+
+<!-- SURCOS -->
+<section id="v-surcos" hidden>
+  <p class="ctx" id="sCtx"></p>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="dict">
+    <label for="iDist" style="font-weight:700">Surco <span id="sNum"></span> · distancias desde la planta 1 (cm)</label>
+    <textarea id="iDist" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      placeholder="51 96 128 152 173…"></textarea>
+    <div class="interim" id="interim"></div>
+    <div class="row">
+      <button class="mic" id="btnMic" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg><span id="micTxt">Dictar</span></button>
+      <button class="btn" id="btnUndo" type="button" style="flex:1 1 80px;padding:12px 8px">⌫ Último</button>
+      <button class="btn" id="btnKb" type="button" style="flex:1 1 90px;padding:12px 8px">⌨︎ Teclado</button>
+    </div>
+    <p class="hint" id="micHint"></p>
+  </div>
+  <p class="status" id="sStatus"></p>
+  <div class="cells" id="cells"></div>
+  <svg class="strip" id="strip" viewBox="0 0 360 64" role="img" aria-label="Posición de las plantas sobre la cinta"></svg>
+  <div class="legend"><span><i style="background:var(--warn)"></i>Doble (&lt; 0,5 × teórica)</span><span><i style="background:var(--bad)"></i>Falla (&gt; 1,5 × teórica)</span><span id="teo"></span></div>
+  <div class="stats" id="sStats"></div>
+  <label class="f">Sector / nota del surco (opcional)<input id="iSector"></label>
+</section>
+
+<!-- RESUMEN -->
+<section id="v-res" hidden>
+  <h2 id="rTitle"></h2>
+  <p class="ctx" id="rCtx"></p>
+  <div class="stats" id="rStats"></div>
+  <div class="tblwrap"><table id="rTbl"></table></div>
+  <dl class="kv" id="rKv"></dl>
+</section>
+
+<!-- AJUSTES -->
+<section id="v-cfg" hidden>
+  <h2>Ajustes</h2>
+  <div class="grid">
+    <label class="f">Distancias por surco<input id="cPl" inputmode="numeric"></label>
+    <label class="f">Surcos por evaluación<input id="cSur" inputmode="numeric"></label>
+    <label class="f full">Técnico (se propone en cada evaluación)<input id="cTec"></label>
+  </div>
+  <div class="card">
+    <b>Dictado sin señal</b>
+    <p class="small" id="vozInfo"></p>
+    <div class="bar" id="vozBar" hidden><i id="vozBarI"></i></div>
+    <button class="btn primary" id="btnVoz">Descargar dictado sin señal (40 MB)</button>
+    <p class="small muted">Se descarga una sola vez, con wifi. Después el botón “Dictar” funciona con o sin señal, en Android y en iPhone, y solo reconoce números.</p>
+  </div>
+  <div class="card">
+    <b>Envío automático a la planilla</b>
+    <label class="f">Dirección de envío (termina en /exec)<input id="cUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+    <div class="row"><button class="btn primary" id="btnTestUrl">Guardar y probar</button><button class="btn" id="btnResend">Enviar todo de nuevo</button></div>
+    <p class="small muted" id="urlInfo">Con la dirección cargada, cada evaluación se envía sola a la planilla de Google cuando hay señal. Si se corrige una evaluación ya enviada, se reemplaza en la planilla.</p>
+  </div>
+  <div class="card">
+    <b>Informes en Excel</b>
+    <p class="small">Desde la computadora, abrí la página de informes: elegís empresa, campaña y cultivo, y genera el Excel con el formato de la planilla de recuentos.</p>
+    <a class="btn" href="informe.html" target="_blank" rel="noopener">Abrir página de informes</a>
+  </div>
+  <div class="card">
+    <b>Lista de lotes</b>
+    <p class="small muted" id="lotesInfo"></p>
+    <p class="small">La lista se baja sola de la planilla de Google (hoja publicada como CSV) cada vez que abrís la app con señal, y queda guardada para usarla sin señal.</p>
+    <label class="f">Dirección de la lista (Publicar en la web › CSV)<input id="cLotesUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?…output=csv"></label>
+    <div class="row"><button class="btn primary" id="btnLotes">Actualizar lista desde la planilla</button></div>
+    <p class="small muted">Sin señal o sin dirección, también podés cargar el CSV a mano (columnas: Empresa, Campo, Lote, Ambiente, Cultivo, Genética, Antecesor, Espaciamiento, Densidad).</p>
+    <input type="file" id="fLotes" accept=".csv,text/csv">
+  </div>
+  <div class="card">
+    <b>Respaldo</b>
+    <p class="small">Cargá un respaldo (.json) de este u otro celular. Las evaluaciones se suman, sin duplicar.</p>
+    <input type="file" id="fBackup" accept=".json,application/json">
+  </div>
+  <p class="small muted" id="verInfo"></p>
+</section>
+</main>
+
+<div class="pad" id="pad" hidden>
+  <div class="padtop">
+    <div class="padlbl"><span id="padLbl"></span><br><span id="padPrev" class="padprev"></span></div>
+    <div class="padnum" id="padNum">—</div>
+  </div>
+  <div class="keys" id="keys">
+    <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+    <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+    <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+    <button class="key del" data-k="del" aria-label="Borrar">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok" id="padOk">Enter ↵</button>
+  </div>
+  <button class="padclose" id="padClose" type="button">Cerrar teclado</button>
+</div>
+<div class="foot" id="foot"></div>
+<div class="toast" id="toast" hidden></div>
+
+<datalist id="dlEF"></datalist><datalist id="dlAnt"></datalist><datalist id="dlContr"></datalist><datalist id="dlSemb"></datalist><datalist id="dlGen"></datalist>
+
+<script src="fflate.js"></script>
+<script src="vosk.js"></script>
+<script>
+"use strict";
+const VERSION = "1.5.1";
+const LOTES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHHByh3mYfSKCYUj01eUDVH8cvbzkVLpQjxAEiji7ma6wOG0mJ6W9qlIgNPm_dmzbCuT19GQKTgvll/pub?gid=1304594210&single=true&output=csv";
+const DATA = {"lotes": [["Lau_2s", "AGBA", "Launania", "Maiz tardio", "Soja", null, 4.7], ["AL_12", "AL", "Auca_Loo", "Maiz", "Soja", 52, 6], ["AL_1bN", "AL", "Auca_Loo", "Maiz tardio", "Soja", null, null], ["AL_2a", "AL", "Auca_Loo", "Maiz", "Maiz 2da", 52, 6], ["AL_4", "AL", "Auca_Loo", "Maiz tardio", "Pastura", null, null], ["AL_6", "AL", "Auca_Loo", "Maiz", "Maiz tardio", 52, 6], ["AL_7", "AL", "Auca_Loo", "Maiz", "Maiz Silo", 52, 6], ["E_1", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_3-4-5", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["E_9", "AL", "Elunen", "Maiz tardio", "Soja", null, null], ["DM_1-2-3-4", "C4", "Don_Manuel", "Maiz tardio", "Maiz Silo 2da", 52.5, 4], ["Fossa_1", "C4", "Fossati", "Maiz", "Soja 2da", 52.5, 4.5], ["Fossa_2", "C4", "Fossati", "Maiz tardio", "Natural", null, 6], ["LCh_02", "C4", "Los_Chañares", "Maiz", "Soja", 52.5, 6.8], ["LCh_14", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_15", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_17b", "C4", "Los_Chañares", "Maiz tardio", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_18", "C4", "Los_Chañares", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["LCh_20", "C4", "Los_Chañares", "Maiz", "Pastura", 52.5, 5.5], ["SJo_18a", "C4", "San_José_RGB", "Maiz tardio", "Maiz Silo 2da", 52.5, 6], ["SJo_6", "C4", "San_José_RGB", "Maiz", "Maiz Silo 2da", 52.5, 4.5], ["Sjo_8b", "C4", "San_José_RGB", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["SMta_04_s", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 5], ["SMta_07", "C4", "Santa_Margarita", "Maiz tardio", "Soja 2da", null, 4.5], ["SMta_15", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_17", "C4", "Santa_Margarita", "Maiz", "Soja 2da", 52.5, 6.8], ["SMta_1_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_2-3_bajo", "C4", "Santa_Margarita", "Maiz", "Maiz Silo Tardio", 52.5, 5.5], ["SMta_20", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", null, 6.8], ["SMta_23n", "C4", "Santa_Margarita", "Maiz tardio", "Pastura", 52.5, 5], ["LCol_2", "Doña Julia", "La_Colonia", "Maiz tardio", "Soja 2da", null, null], ["LCol_4", "Doña Julia", "La_Colonia", "Maiz", "Soja 2da", null, null], ["LD_9", "Doña Julia", "La_Delfina", "Maiz tardio", "Soja 2da", null, null], ["LT_1-2-3", "Doña Julia", "La_Travesia", "Maiz", "Soja 2da", null, null], ["LAl_2-3", "Doña Julia", "Los_Alamos", "Maiz", "Soja 2da", null, null], ["SF_1", "Doña Julia", "San_Faustino", "Maiz", "Soja 2da", null, null], ["SF_2", "Doña Julia", "San_Faustino", "Maiz tardio", "Soja", null, null], ["SP_3", "Doña Julia", "San_Pedro", "Maiz tardio", "Soja", null, null], ["LMgd_4", "ECSRL", "La_Magdalena", "Maiz tardio", "Soja 2da", null, 4.5], ["SPe_1", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_2", "ECSRL", "San_Pedro", "Maiz", "Soja", 52.5, 6.5], ["SPe_5b", "ECSRL", "San_Pedro", "Maiz tardio", "Soja", null, 4], ["DA_11", "ENT", "Don_Angel", "Maiz", "Soja", 70, 4.5], ["DA_2", "ENT", "Don_Angel", "Maiz tardio", "Soja 2da", null, null], ["DA_5", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["DA_7", "ENT", "Don_Angel", "Maiz tardio", "Pastura", null, null], ["LS_4", "ENT", "La_Sofía", "Maiz tardio", "Soja", 70, 6.8], ["LS_6", "ENT", "La_Sofía", "Maiz tardio", "Soja", null, null], ["LC_2", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["LC_4", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", 70, 6.8], ["LC_5", "ENT", "Los_Cuatro", "Maiz tardio", "Soja", null, null], ["VIt_9", "ENT", "Villa_Itatí", "Maiz", "Soja", 70, 6.8], ["ECa_4a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["ECa_6a", "JMP", "El_Carmen", "Maiz tardio", "Soja 2da", null, null], ["LAlc_11", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_12", "JMP", "La_Alcira", "Maiz tardio", "Soja", null, null], ["LAlc_13", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_14", "JMP", "La_Alcira", "Maiz tardio", "Soja 2da", null, null], ["LAlc_4", "JMP", "La_Alcira", "Maiz tardio", "Cultivo de Servicio", null, null], ["SCa_3b", "JMP", "Santa_Candida", "Maiz tardio", "Soja 2da", null, null], ["LProv_6", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LProv_7", "LP", "La_Providencia", "Maiz", "Girasol", 52.5, 6.2], ["LPP_1", "LPP", "Las_Pocas_Plumas", "Maiz", "Soja", 52.5, 6.9], ["LRM_1", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Soja 2da", 52.5, 6], ["LRM_6y11", "LRM", "Los_Reyes_Magos", "Maiz tardio", "Girasol", 52.5, 6.5], ["LRM_8y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["LRM_9y13", "LRM", "Los_Reyes_Magos", "Maiz", "Soja", 52.5, 6.5], ["DP_15B", "La Susana", "Don_Paco", "Maiz", "Soja", null, null], ["DP_16", "La Susana", "Don_Paco", "Maiz tardio", "Soja", null, null], ["LSu_1SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_2SCN", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SB", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LSu_3SC", "La Susana", "La_Susana", "Maiz tardio", "Soja", null, null], ["LHe_1a", "Ment", "La_Helena", "Maiz tardio", "Cultivo de Servicio", 52.5, 4.5], ["LHe_9b-10-encierre", "Ment", "La_Helena", "Maiz tardio", "Soja", 52.5, 6.8], ["LJunta_2A", "PAMPAS-FL", "LA_JUNTA", "Maiz tardio", "Soja", null, null], ["Lmaria_12N", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_14", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_19", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Lmaria_6", "PAMPAS-FL", "LA_MARIA", "Maiz tardio", "Soja", null, null], ["Be_3", "RLG", "Beneitez", "Maiz", "Girasol", 70, 4.8], ["EQ_13", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["EQ_14", "RLG", "EL_Quijote", "Maiz tardio", "Soja", null, null], ["LU_1-12-13-14", "RLG", "La_Union", "Maiz", "Soja", 70, 4.5], ["LU_8-9-10-11", "RLG", "La_Union", "Maiz", "Soja", 70, 6.8], ["Lam_1y2", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Lam_4", "RLG", "Lamaison", "Maiz tardio", "Soja 2da", null, null], ["Mila_3-4-5-6-7", "RLG", "Milanese", "Maiz tardio", "Soja 2da", null, null], ["13_Jun_4", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_5", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_6", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 6.8], ["13_Jun_7", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["13_Jun_9", "RyJLC", "13_de_Junio", "Maiz", "Soja", 52.5, 4.5], ["Ald_1y2", "RyJLC", "Alday", "Maiz", "Soja", 52.5, 5.2], ["Aye_14", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_17", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_3y4", "RyJLC", "Ayelen", "Maiz", "Maiz Silo", 52.5, 6], ["Aye_7", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Aye_8a", "RyJLC", "Ayelen", "Maiz", "Maiz Silo 2da", 52.5, 6], ["Beth_2", "RyJLC", "Bethuart", "Maiz", "Maiz Silo 2da", 52.5, 6.8], ["Bo_7", "RyJLC", "Bonanza", "Maiz", "Maiz Silo 2da", 52.5, 4.7], ["Bo_8y9", "RyJLC", "Bonanza", "Maiz", "Soja", 52.5, 4.7], ["DG_16a", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_18", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DG_5", "RyJLC", "Don_Germán", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["DLu_1y2", "RyJLC", "Don_Lui", "Maiz tardio", "Cultivo de Servicio", 52.5, 6], ["EAm_1", "RyJLC", "El_Amanecer", "Maiz", "Soja", 52.5, 6], ["EA_1-2-3-4", "RyJLC", "El_Anochecer", "Maiz", "Soja", 52.5, 4.7], ["ECo_1", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_2", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Pastoreo", 52.5, 6], ["ECo_3", "RyJLC", "El_Coco", "Maiz tardio", "Maiz Silo Tardio", 52.5, 6], ["ECo_4a", "RyJLC", "El_Coco", "Maiz tardio", "Soja", 52.5, 6], ["ECo_4b", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ECo_5", "RyJLC", "El_Coco", "Maiz tardio", "Sorgo Silo", 52.5, 6], ["ELG_10", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_4", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja 2da", 52.5, 6], ["ELG_5", "RyJLC", "Est_Las_Guasquitas", "Maiz", "Soja", 52.5, 6.8], ["ELG_7", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja", 52.5, 6.8], ["ELG_8", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["ELG_9a", "RyJLC", "Est_Las_Guasquitas", "Maiz tardio", "Soja 2da", 52.5, 6], ["LA_1a", "RyJLC", "La_Alegría", "Maiz", "Soja", 52.5, 5.2], ["LAP_2b", "RyJLC", "La_Alegría_Puesto", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_8", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["Lperl_9", "RyJLC", "La_Perlita", "Maiz", "Maiz Silo Tardio", 52.5, 6], ["LP_12", "RyJLC", "La_Ponderosa", "Maiz", "Soja", 52.5, 6.8], ["LP_5", "RyJLC", "La_Ponderosa", "Maiz tardio", "Natural", 52.5, 6], ["SBe_8b", "RyJLC", "San_Benito", "Maiz", "Maiz Silo 2da", 52.5, 6], ["SJul_7a", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_7b", "RyJLC", "San_Julio", "Maiz tardio", "Soja 2da", 52.5, 6.8], ["SJul_8", "RyJLC", "San_Julio", "Maiz", "Soja 2da", 52.5, 5.2], ["SJul_9", "RyJLC", "San_Julio", "Maiz", "Soja", 52.5, 6.8], ["SRi_26y27", "RyJLC", "San_Ricardo", "Maiz", "Soja", 52.5, 6], ["DJa_1", "SS", "Don_Javier", "Maiz tardio", "Soja", null, null], ["Mo_1", "SS", "El_Moro", "Maiz tardio", "Maiz", null, null], ["ER_1y2", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["ER_9y10", "SS", "El_Recuerdo", "Maiz", "Soja 2da", 70, 7], ["MF_11-13-Rome", "SS", "Martín_Fierro", "Maiz", "Soja", 70, 6.2], ["MF_17", "SS", "Martín_Fierro", "Maiz tardio", "Soja", 70, null], ["FNC-FNG-FO", "SS", "San_Silvestre", "Maiz", "Soja", 70, 5.8], ["FS", "SS", "San_Silvestre", "Maiz tardio", "Pastura", 70, null], ["SS_1", "SS", "San_Silvestre", "Maiz tardio", "Pastura", null, null], ["SS_C4ayb", "SS", "San_Silvestre", "Maiz", "Soja 2da", 70, 6], ["SS_C4c", "SS", "San_Silvestre", "Maiz", "Maiz 2da", 70, 5.8], ["Damb_T5", "TAS", "Dambrosio", "Maiz", "Soja", 52.5, 6], ["Damb_T6", "TAS", "Dambrosio", "Maiz tardio", "Soja", 52.5, 6], ["EF_n", "TAS", "El_Facundo", "Maiz tardio", "Cultivo de Servicio", null, 4.5], ["EF_s", "TAS", "El_Facundo", "Maiz", "Soja", 52.5, 4.5], ["LBo_14", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 5.8], ["LBo_2", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 4], ["LBo_4", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_5", "TAS", "La_Boya", "Maiz", "Maiz Silo Tardio", 52.5, 6.5], ["LBo_7", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, 6], ["LBo_8a", "TAS", "La_Boya", "Maiz", "Verdeo de Invierno", 52.5, null], ["LBo_9a", "TAS", "La_Boya", "Maiz tardio", "Pastura", 52.5, 6], ["LLu_3r", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.8], ["LLu_5", "TAS", "La_Lucha", "Maiz tardio", "Pastura", 52.5, 5.5], ["LCor_1", "TAS", "Las_Corridas", "Maiz tardio", "Verdeo de Invierno", 52.5, 5.8], ["LU_8-9-10-11 Cos", "UAP", "La_Union", "Maiz", "Soja", 70, 6.8]], "ambientes": [["L3", "L3 (>80% arena)"], ["L2", "L2 (70-80% arena)"], ["L1", "L1 (<70% arena)"], ["ML3", "ML 3 (>80% arena)"], ["ML2", "ML 2 (70-80% arena)"], ["ML1", "ML 1 (<70% arena)"], ["ML-T", "ML-T (tapto < 60 cm)"], ["B-T1", "B-T1 (tapto <60 cm)"], ["B-T2", "B-T2 (tapto <60 + CaCo3)"], ["B-T3", "B-T3 (tapto <60 + >8ph)"], ["B-Ts1", "B-Ts1 (tosca 60-120cm)"], ["B-Ts2", "B-Ts2 (tosca <60cm)"], ["ML-Ts1", "ML-Ts1 (tosca 60-120cm)"], ["ML-Ts2", "ML-Ts2 (tosca <60cm)"], ["L1-Ts1", "L1-Ts1 (tosca 60-120cm)"], ["L1-Ts2", "L1-Ts2 (tosca <60cm)"], ["B1", "B1 (>3% MO)"], ["B2", "B2 (<3% MO)"], ["B3", "B3 (> 8ph)"]], "antecesores": ["Arveja", "Avena", "Camelina", "Cebada", "Cebada Silo", "Centeno", "Cultivo de Servicio", "Garbanzo", "Girasol", "Inundación", "Maiz", "Maiz tardio", "Maiz 2da", "Maíz Pastoreo", "Maiz Silo", "Maiz Silo Tardio", "Maiz Silo 2da", "Maní", "Natural", "Papa", "Pasto Llorón", "Pastura", "Soja", "Soja 2da", "Sorgo", "Sorgo Pastoreo", "Sorgo Silo", "Trigo", "Trigo Silo", "Verdeo de Invierno", "Verdeo de Verano", "Triticale Silo", "Centeno Silo", "Vicia + Graminea silo"]};
+const $ = s => document.querySelector(s);
+const KEY = "implantacion.v1";
+
+/* ---------------- almacenamiento ---------------- */
+let db = { evals: [], cfg: { nPl: 15, nSur: 6, tec: "" }, lotes: null, lotesFecha: null };
+function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("¡No se pudo guardar! Exportá los datos ahora."); } }
+try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
+
+/* ---------------- números dictados ---------------- */
+const W = {cero:[0,"u"],un:[1,"u"],uno:[1,"u"],una:[1,"u"],dos:[2,"u"],tres:[3,"u"],cuatro:[4,"u"],cinco:[5,"u"],seis:[6,"u"],siete:[7,"u"],ocho:[8,"u"],nueve:[9,"u"],
+ diez:[10,"s"],once:[11,"s"],doce:[12,"s"],trece:[13,"s"],catorce:[14,"s"],quince:[15,"s"],dieciseis:[16,"s"],diecisiete:[17,"s"],dieciocho:[18,"s"],diecinueve:[19,"s"],
+ veinte:[20,"s"],veintiun:[21,"s"],veintiuno:[21,"s"],veintidos:[22,"s"],veintitres:[23,"s"],veinticuatro:[24,"s"],veinticinco:[25,"s"],veintiseis:[26,"s"],veintisiete:[27,"s"],veintiocho:[28,"s"],veintinueve:[29,"s"],
+ treinta:[30,"t"],cuarenta:[40,"t"],cincuenta:[50,"t"],sesenta:[60,"t"],setenta:[70,"t"],ochenta:[80,"t"],noventa:[90,"t"],
+ cien:[100,"c"],ciento:[100,"h"],doscientos:[200,"h"],trescientos:[300,"h"],cuatrocientos:[400,"h"],quinientos:[500,"h"],seiscientos:[600,"h"],setecientos:[700,"h"],ochocientos:[800,"h"],novecientos:[900,"h"],
+ mil:[1000,"m"]};
+function parseNums(text){
+  let s = (text||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  s = s.replace(/(\d)\.(?=\d{3}(?!\d))/g,"$1");            // 1.020 -> 1020
+  s = s.replace(/centimetros?|cm\b/g," ").replace(/(\d)([a-z])/g,"$1 $2").replace(/([a-z])(\d)/g,"$1 $2");
+  s = s.replace(/[^a-z0-9]+/g," ").trim();
+  const out = []; let cur = null, st = null;
+  const flush = () => { if(cur!==null){ out.push(cur); } cur = null; st = null; };
+  for(const tok of s.split(" ")){
+    if(!tok) continue;
+    if(/^\d+$/.test(tok)){ flush(); out.push(parseInt(tok,10)); continue; }
+    if(tok==="y") continue;
+    const w = W[tok]; if(!w) continue;
+    const [v,t] = w;
+    if(t==="u"){ if(cur!==null && (st==="t"||st==="h"||st==="m")){ cur+=v; st="u"; } else { flush(); cur=v; st="u"; } }
+    else if(t==="s"||t==="t"){ if(cur!==null && (st==="h"||st==="m")){ cur+=v; st=t; } else { flush(); cur=v; st=t; } }
+    else if(t==="h"||t==="c"){ if(cur!==null && st==="m"){ cur+=v; st=t; } else { flush(); cur=v; st=t; } }
+    else if(t==="m"){ if(cur!==null && cur<1000){ cur*=1000; } else { flush(); cur=1000; } st="m"; }
+  }
+  flush();
+  return out;
+}
+
+/* ---------------- cálculos (idénticos a la planilla) ---------------- */
+function calc(vals, esp, dens, n){
+  const r = { n: vals.length, need: n, vals, ok:false, inv:-1 };
+  for(let i=0;i<vals.length;i++){ if(vals[i] <= (i?vals[i-1]:0)){ r.inv = i; break; } }
+  r.iv = vals.map((v,i)=> v - (i?vals[i-1]:0));
+  r.teo = (esp>0 && dens>0) ? 1e8/(dens*esp) : null;
+  r.cls = r.iv.map(x => r.teo==null ? "" : (x < .5*r.teo ? "dob" : (x > 1.5*r.teo ? "fal" : "")));
+  if(vals.length===n && r.inv<0 && n>1){
+    r.ok = true;
+    const m = vals[n-1]/n; r.media = m;
+    const ss = r.iv.reduce((a,x)=>a+(x-m)*(x-m),0); r.desv = Math.sqrt(ss/(n-1)); r.cv = r.desv/m;
+    r.plha = esp>0 ? 1e8/(m*esp) : null;
+    if(r.teo!=null){ r.dob = r.cls.filter(c=>c==="dob").length/n; r.fal = r.cls.filter(c=>c==="fal").length/n; r.unif = 1-r.dob-r.fal; }
+  }
+  return r;
+}
+function evalCalc(ev){
+  const n = db.cfg.nPl, esp = num(ev.esp), dens = num(ev.dens);
+  const rs = ev.surcos.map(s => calc(parseNums(s.texto), esp, dens, n));
+  const ok = rs.filter(r=>r.ok);
+  const avg = k => { const a = ok.map(r=>r[k]).filter(x=>x!=null); return a.length ? a.reduce((p,x)=>p+x,0)/a.length : null; };
+  const R = { rs, nOk: ok.length, plha: avg("plha"), media: avg("media"), desv: avg("desv"), cv: avg("cv"), dob: avg("dob"), fal: avg("fal"), unif: avg("unif") };
+  R.logro = (R.plha!=null && dens>0) ? R.plha/dens : null;
+  return R;
+}
+function num(x){ if(x==null||x==="") return null; let t=String(x).trim(); if(/^\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,""); const v = parseFloat(t.replace(",",".")); return isFinite(v)?v:null; }
+const f0 = v => v==null ? "—" : Math.round(v).toLocaleString("es-AR");
+const f1 = v => v==null ? "—" : v.toLocaleString("es-AR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const fp = v => v==null ? "—" : (v*100).toLocaleString("es-AR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+
+/* ---------------- utilidades UI ---------------- */
+let toastT; function toast(m,ms=2600){ const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,ms); }
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+function fmtFecha(s){ if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`; }
+
+/* ---------------- navegación ---------------- */
+let view = "home", cur = null, curS = 0;
+function show(v){
+  view = v;
+  for(const id of ["home","eval","surcos","res","cfg"]) $("#v-"+id).hidden = id!==v;
+  $("#btnBack").hidden = v==="home";
+  $("#btnCfg").hidden = v!=="home";
+  const ev = cur;
+  $("#ttl").textContent = v==="home" ? "Recuentos de Implantación" : v==="cfg" ? "Ajustes" :
+    (ev ? (ev.lote||"Sin lote") + (ev.ambiente ? " · "+ev.ambiente : "") : "");
+  renderFoot(); window.scrollTo(0,0);
+  if(v==="surcos") wake(true); else wake(false);
+  if(v!=="surcos" && padOn){ padOn=false; $("#pad").hidden=true; document.body.classList.remove("padon"); $("#iDist").readOnly=false; $("#btnKb").textContent="⌨︎ Teclado"; }
+  if(v!=="surcos") stopMic();
+}
+function renderFoot(){
+  const f = $("#foot"); f.innerHTML = "";
+  const b = (txt, cls, fn) => { const x=document.createElement("button"); x.className="btn "+cls; x.textContent=txt; x.onclick=fn; f.appendChild(x); return x; };
+  if(view==="home"||view==="cfg"){ f.hidden = true; return; }
+  f.hidden = false;
+  if(view==="eval"){ b("Ir a los surcos →","primary",()=>{ if(validEval()) { show("surcos"); renderSurcos(); } }); }
+  if(view==="surcos"){
+    b("Datos","",()=>{ show("eval"); fillEval(); });
+    const R = calc(parseNums(cur.surcos[curS].texto), num(cur.esp), num(cur.dens), db.cfg.nPl);
+    const last = curS >= cur.surcos.length-1;
+    if(!last){ const x=b(`Surco ${curS+2} →`, R.ok?"primary":"", ()=>{ curS++; renderSurcos(); focusDist(); }); }
+    else { b("Ver resultado","primary",()=>{ show("res"); renderRes(); }); }
+  }
+  if(view==="surcos" && padOn) f.hidden = true;
+  if(view==="res"){ b("← Surcos","",()=>{ show("surcos"); renderSurcos(); }); b("Terminar","dark",()=>{ cur=null; show("home"); renderHome(); toast("Evaluación guardada en el celular"); sync(false); }); }
+}
+$("#btnBack").onclick = () => {
+  if(view==="cfg"){ readCfg(); show("home"); renderHome(); }
+  else if(view==="eval"){ cur=null; show("home"); renderHome(); }
+  else if(view==="surcos"){ show("eval"); fillEval(); }
+  else if(view==="res"){ show("surcos"); renderSurcos(); }
+};
+$("#btnCfg").onclick = () => { show("cfg"); renderCfg(); };
+
+/* ---------------- inicio ---------------- */
+function renderHome(){
+  const before = db.evals.length;
+  db.evals = db.evals.filter(e => e===cur || (e.lote||"").trim() || e.surcos.some(x=>(x.texto||"").trim()));
+  if(db.evals.length!==before) save();
+  const L = $("#evList");
+  const evs = [...db.evals].sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||"") || b.creado-a.creado);
+  if(!evs.length){ L.innerHTML = `<div class="empty">Todavía no hay evaluaciones.<br>Tocá <b>+ Nueva evaluación</b> para empezar.</div>`; }
+  else {
+    L.innerHTML = `<div class="list">${evs.map(ev=>{ const R = evalCalc(ev);
+      return `<button class="item" data-id="${ev.id}"><span class="t">${esc(ev.lote||"Sin lote")}${ev.ambiente?" · "+esc(ev.ambiente):""}${db.cfg.url ? ((ev.enviado && (ev.actualizado||0)<=ev.enviado) ? '<span class="tag exp">enviada</span>' : '<span class="tag pend">por enviar</span>') : (ev.exportado?'<span class="tag exp">exportada</span>':'<span class="tag pend">sin exportar</span>')}</span>
+      <span class="s">${fmtFecha(ev.fecha)} · ${esc(ev.campo||"")} · ${esc(ev.cultivo)} · ${R.nOk}/${ev.surcos.length} surcos</span>
+      <span class="k num"><b>${R.plha==null?"—":f0(R.plha)}</b>pl/ha · CV ${R.cv==null?"—":fp(R.cv)}</span></button>`; }).join("")}</div>`;
+    L.querySelectorAll(".item").forEach(x=>x.onclick=()=>{ cur = db.evals.find(e=>e.id===x.dataset.id); curS=0; show("res"); renderRes(); });
+  }
+  const pend = db.evals.filter(e=>!e.exportado).length;
+  $("#expInfo").textContent = db.evals.length ? `${db.evals.length} evaluaciones guardadas en este celular · ${pend} sin exportar a archivo.` : "Cuando cargues evaluaciones, también podés exportarlas a archivos.";
+  $("#btnExpPend").disabled = !pend; $("#btnExpAll").disabled = !db.evals.length;
+  $("#vozBanner").hidden = vozListo();
+  renderSync();
+}
+$("#btnNew").onclick = () => {
+  cur = { id: uid(), creado: Date.now(), actualizado: Date.now(), exportado: null, fecha: today(), tecnico: db.cfg.tec||"",
+    cultivo:"Maíz", lote:"", empresa:"", campo:"", ambiente:"", ef:"", antecesor:"", contratista:"", sembradora:"", genetica:"", esp:"", dens:"",
+    lat:null, lon:null, prec:null, obs:"", surcos: Array.from({length: db.cfg.nSur}, (_,i)=>({n:i+1, sector:"", texto:""})) };
+  db.evals.push(cur); curS = 0; save();
+  show("eval"); fillEval(); setTimeout(()=>$("#iLote").focus(),50);
+};
+
+/* ---------------- datos de la evaluación ---------------- */
+const F = {iLote:"lote",iEmpresa:"empresa",iCampo:"campo",iCultivo:"cultivo",iAmb:"ambiente",iFecha:"fecha",iEF:"ef",iAnt:"antecesor",iContr:"contratista",iSemb:"sembradora",iGen:"genetica",iEsp:"esp",iDens:"dens",iTec:"tecnico",iObs:"obs"};
+function fillLists(){
+  const l = loteActual(), enL = l && l[7] ? Object.keys(l[7]) : [];
+  const lab = c => (DATA.ambientes.find(a=>a[0]===c)||[c,c])[1];
+  const opt = c => `<option value="${esc(c)}">${esc(lab(c))}</option>`;
+  const resto = DATA.ambientes.map(a=>a[0]).filter(c=>!enL.includes(c));
+  if(cur && cur.ambiente && !enL.includes(cur.ambiente) && !resto.includes(cur.ambiente)) resto.push(cur.ambiente);
+  $("#iAmb").innerHTML = `<option value="">Lote completo</option>` +
+    (enL.length ? `<optgroup label="En la planilla para este lote">${enL.map(opt).join("")}</optgroup><optgroup label="Otros ambientes">${resto.map(opt).join("")}</optgroup>` : resto.map(opt).join(""));
+  $("#dlAnt").innerHTML = DATA.antecesores.map(a=>`<option value="${esc(a)}">`).join("");
+  $("#dlEF").innerHTML = ["VE","V1","V2","V3","V4","V5","V6","V7","V8","V10","V12"].map(a=>`<option value="${a}">`).join("");
+  const uniq = k => [...new Set(db.evals.map(e=>e[k]).filter(Boolean))];
+  $("#dlContr").innerHTML = uniq("contratista").map(a=>`<option value="${esc(a)}">`).join("");
+  $("#dlSemb").innerHTML = uniq("sembradora").map(a=>`<option value="${esc(a)}">`).join("");
+  const gens = [...new Set([...lotes().flatMap(x=>[x[8], ...Object.values(x[7]||{}).map(v=>v.g)]), ...uniq("genetica")].filter(Boolean))].sort();
+  $("#dlGen").innerHTML = gens.map(a=>`<option value="${esc(a)}">`).join("");
+}
+function fillEval(){
+  fillLists();
+  for(const [id,k] of Object.entries(F)) $("#"+id).value = cur[k] ?? "";
+  $("#evTitle").textContent = cur.lote ? "Datos de la evaluación" : "Nueva evaluación";
+  $("#gpsTxt").textContent = cur.lat!=null ? `Ubicación: ${cur.lat.toFixed(5)}, ${cur.lon.toFixed(5)} (±${Math.round(cur.prec)} m)` : "El GPS funciona sin señal de datos.";
+  $("#btnDel").hidden = false; $("#btnDel").textContent = "Eliminar evaluación"; delArm=false;
+  $("#evErr").hidden = true; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
+  bloqueo();
+}
+// hasta que no se elija un lote de la lista, el resto del formulario queda bloqueado
+const loteOk = () => !!(cur && cur.lote && cur.empresa);   // empresa y campo solo salen de la lista
+function bloqueo(){
+  const ok = loteOk();
+  document.querySelectorAll("#v-eval .grid input, #v-eval .grid select, #v-eval .grid textarea, #btnGPS").forEach(x=>{ if(x.id!=="iLote") x.disabled=!ok; });
+}
+for(const [id,k] of Object.entries(F)){
+  $("#"+id).addEventListener("input", e=>{ if(!cur) return; cur[k] = e.target.value; cur.actualizado = Date.now(); cur.exportado = null; save();
+    if(k==="lote"||k==="ambiente") $("#ttl").textContent = (cur.lote||"Sin lote") + (cur.ambiente?" · "+cur.ambiente:""); });
+  $("#"+id).addEventListener("change", e=>{ if(!cur) return; cur[k] = e.target.value; save(); });
+}
+$("#iTec").addEventListener("change", e=>{ db.cfg.tec = e.target.value; save(); });
+// buscador de lotes
+function cultivoDe(c){ c=(c||"").toLowerCase(); if(c.includes("giras")) return "Girasol"; if(c.includes("tard")) return "Maíz tardío"; return "Maíz"; }
+$("#iLote").addEventListener("input", ()=>{
+  const q = $("#iLote").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const S = $("#sugs");
+  if(q.length<1){ S.hidden=true; return; }
+  const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/_/g," ");
+  const qq = q.replace(/_/g," ");
+  const m = lotes().filter(l => norm(l[0]).includes(qq) || norm(l[2]).includes(qq) || norm(l[1]).includes(qq)).slice(0,12);
+  if(!m.length){ S.hidden=true; return; }
+  S.innerHTML = m.map((l,i)=>`<button type="button" data-i="${lotes().indexOf(l)}"><b>${esc(l[0])}</b><span>${esc(l[2])} · ${esc(l[1])} · ${esc(l[3])}${l[5]?" · "+String(l[5]).replace(".",",")+" cm":""}</span></button>`).join("");
+  S.hidden=false;
+  S.querySelectorAll("button").forEach(b=>b.onmousedown=b.ontouchstart=ev=>{ ev.preventDefault(); pickLote(lotes()[+b.dataset.i]); });
+});
+$("#iLote").addEventListener("input", ()=>{ if(!cur) return; const l=loteActual();
+  if(!l && (cur.empresa||cur.campo)){ cur.empresa=""; cur.campo=""; $("#iEmpresa").value=""; $("#iCampo").value=""; save(); }
+  bloqueo(); });
+$("#iLote").addEventListener("blur", ()=>setTimeout(()=>{ $("#sugs").hidden=true;
+  if(!cur || (cur.empresa && loteActual())) return;
+  const t=(cur.lote||"").trim().toLowerCase(); if(!t) return;
+  const m=lotes().filter(l=>l[0].toLowerCase()===t);
+  if(m.length===1) pickLote(m[0]);
+  else if(m.length>1) toast("Hay más de un lote con ese nombre: elegilo de la lista para saber de qué campo es.",4500);
+  else toast("Ese lote no está en la planilla. Elegilo de la lista (si es nuevo, agregalo a la planilla y actualizá la lista).",5000);
+},180));
+function pickLote(l){
+  cur.lote=l[0]; cur.empresa=l[1]; cur.campo=l[2]; cur.cultivo=cultivoDe(l[3]); cur.antecesor=l[4]||cur.antecesor;
+  if(l[5]) cur.esp = String(l[5]).replace(".",",");
+  if(l[6]) cur.dens = String(Math.round(l[6]*10000));
+  if(l[8]) cur.genetica = l[8];
+  const ambs = l[7] ? Object.keys(l[7]) : [];
+  if(ambs.length===1 && !cur.ambiente) cur.ambiente = ambs[0];
+  cur.actualizado=Date.now(); save(); fillEval(); $("#sugs").hidden=true; datosAmbiente(false);
+  $("#ttl").textContent = cur.lote + (cur.ambiente?" · "+cur.ambiente:"");
+  const nd = new Set(ambs.map(a=>l[7][a].d).filter(x=>x!=null)).size;
+  toast(nd>1 && !cur.ambiente ? "Datos del lote cargados. La densidad cambia según el ambiente: elegí el ambiente." : "Datos del lote cargados. Podés corregir lo que haga falta.");
+}
+function validEval(){
+  const errs=[]; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
+  if(!loteOk()){ errs.push("el lote (elegilo de la lista)"); $("#fLote").classList.add("err"); }
+  const e=num(cur.esp), d=num(cur.dens);
+  if(!(e>=15&&e<=120)){ errs.push("el espaciamiento entre surcos (cm)"); $("#fEsp").classList.add("err"); }
+  if(!(d>=10000&&d<=200000)){ errs.push("la densidad de siembra en semillas por hectárea (ej. 60000)"); $("#fDens").classList.add("err"); }
+  if(errs.length){ $("#evErr").textContent = "Falta completar "+errs.join(", ")+"."; $("#evErr").hidden=false; return false; }
+  $("#evErr").hidden=true; return true;
+}
+$("#btnGPS").onclick = () => {
+  if(!navigator.geolocation){ toast("Este celular no permite usar el GPS desde la app"); return; }
+  $("#gpsTxt").textContent = "Buscando señal GPS… (al aire libre tarda menos)";
+  navigator.geolocation.getCurrentPosition(p=>{ cur.lat=p.coords.latitude; cur.lon=p.coords.longitude; cur.prec=p.coords.accuracy; save(); fillEval(); buzz(40); },
+    e=>{ $("#gpsTxt").textContent = e.code===1 ? "Sin permiso de ubicación. Habilitalo en los permisos del navegador." : "No se obtuvo ubicación. Probá de nuevo al aire libre."; },
+    {enableHighAccuracy:true, timeout:30000, maximumAge:60000});
+};
+let delArm=false, delT;
+$("#btnDel").onclick = () => {
+  if(!delArm){ delArm=true; $("#btnDel").textContent="Tocá de nuevo para eliminar"; delT=setTimeout(()=>{delArm=false; $("#btnDel").textContent="Eliminar evaluación";},3500); return; }
+  clearTimeout(delT); db.evals = db.evals.filter(e=>e!==cur); cur=null; save(); show("home"); renderHome(); toast("Evaluación eliminada");
+};
+
+/* ---------------- surcos ---------------- */
+function focusDist(){ setTimeout(()=>{ const t=$("#iDist"); t.focus(); t.setSelectionRange(t.value.length,t.value.length); },60); }
+function renderTabs(){
+  const n = db.cfg.nPl, esp=num(cur.esp), dens=num(cur.dens);
+  $("#tabs").innerHTML = cur.surcos.map((s,i)=>{ const r = calc(parseNums(s.texto),esp,dens,n);
+    const c = r.ok ? "ok" : (r.inv>=0 || r.n>n) ? "bad" : r.n ? "part" : "";
+    return `<button class="tab ${c} ${i===curS?"on":""}" role="tab" aria-selected="${i===curS}" data-i="${i}">${i+1}</button>`; }).join("") +
+    `<button class="tab add" id="addS" aria-label="Agregar surco">+</button>`;
+  $("#tabs").querySelectorAll(".tab[data-i]").forEach(b=>b.onclick=()=>{ curS=+b.dataset.i; renderSurcos(); });
+  $("#addS").onclick = ()=>{ cur.surcos.push({n:cur.surcos.length+1,sector:"",texto:""}); curS=cur.surcos.length-1; save(); renderSurcos(); focusDist(); };
+  const on = $("#tabs .tab.on"); on && on.scrollIntoView({inline:"nearest",block:"nearest"});
+}
+function renderSurcos(){
+  const s = cur.surcos[curS];
+  $("#sCtx").textContent = `${cur.campo?cur.campo+" · ":""}${cur.cultivo} · ${String(cur.esp).replace(".",",")} cm entre surcos · ${f0(num(cur.dens))} sem/ha`;
+  $("#sNum").textContent = curS+1;
+  $("#iDist").value = s.texto;
+  $("#iSector").value = s.sector||"";
+  renderTabs(); renderSurcoCalc();
+  if(db.cfg.pad && !padOn) padShow(true); else { if(padOn){ padBuf=""; padRender(); } renderFoot(); }
+}
+function renderSurcoCalc(){
+  const n = db.cfg.nPl, esp=num(cur.esp), dens=num(cur.dens);
+  const vals = parseNums(cur.surcos[curS].texto);
+  const r = calc(vals, esp, dens, n);
+  // estado
+  const S = $("#sStatus");
+  if(!vals.length){ S.className="status"; S.textContent = `Dictá las ${n} distancias acumuladas (sin el 0 de la planta 1).`; }
+  else if(r.inv>=0){ S.className="status bad"; S.textContent = r.inv===0 ? "El primer valor tiene que ser mayor que 0." : `Revisá los valores ${r.inv} y ${r.inv+1}: ${vals[r.inv-1]} → ${vals[r.inv]}. Las distancias deben ir en aumento.`; }
+  else if(vals.length>n){ S.className="status bad"; S.textContent = `Hay ${vals.length} valores y deben ser ${n}. Borrá los que sobran.`; }
+  else if(!r.ok){ S.className="status part"; S.textContent = `${vals.length} de ${n} valores. Faltan ${n-vals.length}.`; }
+  else { S.className="status ok"; S.textContent = `✓ Surco completo: ${n} valores.`; }
+  // celdas
+  let h="";
+  for(let i=0;i<Math.max(n,vals.length);i++){
+    const v=vals[i];
+    if(v==null){ h+=`<div class="cell empty"><div class="p">P${i+2}</div><div class="v">·</div><div class="d">&nbsp;</div></div>`; continue; }
+    const c = [r.inv>=0?"":(r.cls[i]||""), (i===r.inv||i===r.inv-1)&&r.inv>=0?"inv":"", i>=n?"inv":""].join(" ");
+    h+=`<div class="cell ${c}"><div class="p">P${i+2}</div><div class="v">${v}</div><div class="d">${r.iv[i]>0?"+"+r.iv[i]:"−"+Math.abs(r.iv[i])}</div></div>`;
+  }
+  $("#cells").innerHTML = h;
+  $("#teo").textContent = r.teo ? `Teórica: ${f1(r.teo)} cm entre plantas` : "";
+  // cinta
+  drawStrip(vals, r);
+  // estadísticas
+  const st = (l,v,u="",big="") => `<div class="stat ${big}"><div class="l">${l}</div><div class="n">${v}${u?` <small>${u}</small>`:""}</div></div>`;
+  $("#sStats").innerHTML = r.ok
+    ? st("Plantas logradas", f0(r.plha), "pl/ha", "big") + st("Dist. media", f1(r.media), "cm") + st("Desvío", f1(r.desv), "cm") + st("CV", fp(r.cv)) +
+      st("Dobles", fp(r.dob)) + st("Fallas", fp(r.fal)) + st("Uniformidad", fp(r.unif))
+    : st("Plantas logradas","—","pl/ha","big") + `<div class="stat" style="grid-column:span 3"><div class="l">Resultados</div><div class="n" style="font-size:14px;font-weight:600;white-space:normal">Aparecen al completar los ${n} valores.</div></div>`;
+}
+function drawStrip(vals, r){
+  const svg = $("#strip"), Wd = 360, pad = 10, H = 64;
+  const max = Math.max(100, vals.length ? vals[vals.length-1] : 0, r.teo ? r.teo*db.cfg.nPl : 0);
+  const x = v => pad + (v/max)*(Wd-2*pad);
+  let g = `<rect x="${pad}" y="22" width="${Wd-2*pad}" height="16" rx="2" fill="var(--tape)"/>`;
+  const stepMinor = max>800?20:10, stepMajor = 100;
+  for(let c=0;c<=max;c+=stepMinor){ const big = c%stepMajor===0; g+=`<line x1="${x(c)}" x2="${x(c)}" y1="22" y2="${big?34:28}" stroke="var(--tape-ink)" stroke-width="${big?1:.5}"/>`;
+    if(big && c>0) g+=`<text x="${x(c)}" y="54" font-size="8" text-anchor="middle" fill="var(--muted)" font-family="system-ui">${c/100} m</text>`; }
+  const pts=[0,...vals];
+  for(let i=1;i<pts.length;i++){ const c=r.cls[i-1]; if(c){ g+=`<rect x="${x(pts[i-1])}" y="10" width="${Math.max(1,x(pts[i])-x(pts[i-1]))}" height="6" rx="2" fill="${c==="dob"?"var(--warn)":"var(--bad)"}"/>`; } }
+  pts.forEach((v,i)=>{ g+=`<circle cx="${x(v)}" cy="13" r="4" fill="${i===0?"var(--ink)":"var(--ok)"}" stroke="var(--surface)" stroke-width="1"/>`; });
+  svg.innerHTML = g;
+}
+$("#iDist").addEventListener("input", e=>{
+  const s = cur.surcos[curS]; const before = calc(parseNums(s.texto),num(cur.esp),num(cur.dens),db.cfg.nPl).ok;
+  s.texto = e.target.value;
+  const vv = parseNums(s.texto), N = db.cfg.nPl;
+  if(vv.length > N){ s.texto = vv.slice(0,N).join(" ")+" "; e.target.value = s.texto; e.target.blur(); stopMic(); toast(`Surco completo: ya están las ${N} distancias (planta ${N+1}). No se cargan más valores.`,4000); }
+  cur.actualizado=Date.now(); cur.exportado=null; save();
+  renderTabs(); renderSurcoCalc(); padRender();
+  const after = calc(parseNums(s.texto),num(cur.esp),num(cur.dens),db.cfg.nPl);
+  if(after.ok && !before){ buzz([60,60,60]); if(recOn){ stopMic(); e.target.blur(); toast(`Surco completo: ${N} distancias cargadas.`); } renderFoot(); }
+  else if(!after.ok && before) renderFoot();
+});
+$("#iSector").addEventListener("input", e=>{ cur.surcos[curS].sector=e.target.value; save(); });
+$("#btnUndo").onclick = () => {
+  const s = cur.surcos[curS]; const v = parseNums(s.texto); v.pop();
+  s.texto = v.join(" ") + (v.length?" ":""); $("#iDist").value = s.texto; save(); renderTabs(); renderSurcoCalc(); renderFoot(); padRender();
+};
+let kbNum=false;
+/* ---------------- teclado numérico propio (carga a mano) ---------------- */
+let padOn=false, padBuf="";
+function padVals(){ return parseNums(cur.surcos[curS].texto); }
+function padShow(on){
+  padOn=on; $("#pad").hidden=!on; document.body.classList.toggle("padon",on);
+  $("#iDist").readOnly=on; $("#btnKb").textContent = on ? "Cerrar teclado" : "⌨︎ Teclado";
+  if(on){ $("#iDist").blur(); padBuf=""; padRender(); }
+  renderFoot();
+}
+function padRender(){
+  if(!padOn||!cur) return;
+  const v=padVals(), n=db.cfg.nPl, k=v.length, full=k>=n, last=curS>=cur.surcos.length-1;
+  $("#padLbl").textContent = full ? `Surco ${curS+1} completo ✓` : `Surco ${curS+1} · planta ${k+2} (valor ${k+1} de ${n})`;
+  $("#padPrev").textContent = full ? "Enter para seguir" : (k ? `anterior: ${v[k-1]} cm` : "distancia desde la planta 1, en cm");
+  const pn=$("#padNum"); pn.textContent = padBuf || (full ? "✓" : "—"); pn.classList.remove("err"); pn.classList.toggle("okk", full);
+  const ok=$("#padOk"); ok.textContent = full ? (last ? "Resultado →" : `Surco ${curS+2} →`) : "Enter ↵"; ok.classList.toggle("next", full);
+}
+function padKey(k){
+  const v=padVals(), n=db.cfg.nPl, full=v.length>=n;
+  if(/^\d$/.test(k)){ if(full){ buzz(80); return; } if(padBuf.length<4){ padBuf = (padBuf==="0"?"":padBuf)+k; buzz(8); } padRender(); return; }
+  if(k==="del"){
+    if(padBuf){ padBuf=padBuf.slice(0,-1); }
+    else if(v.length){ v.pop(); const ta=$("#iDist"); ta.value = v.join(" ")+(v.length?" ":""); ta.dispatchEvent(new Event("input")); toast("Se borró el último valor",1500); }
+    buzz(8); padRender(); return;
+  }
+  if(k==="ok"){
+    if(full){ if(curS < cur.surcos.length-1){ curS++; renderSurcos(); } else { padShow(false); show("res"); renderRes(); } return; }
+    if(!padBuf) { buzz(60); return; }
+    const x=parseInt(padBuf,10), prev=v.length?v[v.length-1]:0;
+    if(!(x>prev)){ const pn=$("#padNum"); pn.classList.remove("err"); void pn.offsetWidth; pn.classList.add("err"); buzz([80,40,80]);
+      toast(`Tiene que ser mayor que ${prev} cm (planta anterior)`,2500); padBuf=""; setTimeout(()=>{ if(!padBuf) $("#padNum").textContent="—"; },700); return; }
+    const ta=$("#iDist"); ta.value = v.concat(x).join(" ")+" "; padBuf=""; ta.dispatchEvent(new Event("input")); buzz(15); padRender();
+  }
+}
+$("#keys").addEventListener("click", e=>{ const b=e.target.closest(".key"); if(b) padKey(b.dataset.k); });
+$("#padClose").onclick = () => { db.cfg.pad=false; save(); padShow(false); };
+$("#btnKb").onclick = () => { if(padOn){ db.cfg.pad=false; save(); padShow(false); } else { stopMic(); db.cfg.pad=true; save(); padShow(true); } };
+document.addEventListener("keydown", e=>{
+  if(!padOn || view!=="surcos") return;
+  if(/^\d$/.test(e.key)) { padKey(e.key); e.preventDefault(); }
+  else if(e.key==="Backspace"){ padKey("del"); e.preventDefault(); }
+  else if(e.key==="Enter"){ padKey("ok"); e.preventDefault(); }
+});
+
+
+/* ---------------- dictado ----------------
+   1) Dictado propio (Vosk, en el celular): funciona con y sin señal una vez descargado.
+   2) Si no está descargado y hay señal: reconocimiento de voz del navegador.
+   3) Sin señal y sin descarga: micrófono del teclado. */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MODEL_URL = "https://huggingface.co/rhasspy/vosk-models/resolve/main/es/vosk-model-small-es-0.42.zip";
+const MODEL_KEY = "modelo_es_042";
+let rec=null, recOn=false;
+
+/* números en palabras para restringir el reconocimiento a distancias */
+function numPalabras(n){
+  const U=["","uno","dos","tres","cuatro","cinco","seis","siete","ocho","nueve","diez","once","doce","trece","catorce","quince","dieciséis","diecisiete","dieciocho","diecinueve","veinte","veintiuno","veintidós","veintitrés","veinticuatro","veinticinco","veintiséis","veintisiete","veintiocho","veintinueve"];
+  const T=["","","","treinta","cuarenta","cincuenta","sesenta","setenta","ochenta","noventa"];
+  const H=["","ciento","doscientos","trescientos","cuatrocientos","quinientos","seiscientos","setecientos","ochocientos","novecientos"];
+  if(n<30) return U[n];
+  if(n<100) return T[Math.floor(n/10)] + (n%10 ? " y "+U[n%10] : "");
+  if(n===100) return "cien";
+  if(n<1000) return H[Math.floor(n/100)] + (n%100 ? " "+numPalabras(n%100) : "");
+  return "mil" + (n%1000 ? " "+numPalabras(n%1000) : "");
+}
+const GRAMATICA = JSON.stringify([...Array.from({length:1500},(_,i)=>numPalabras(i+1)), "[unk]"]);
+
+function vozListo(){ return !!(db.cfg && db.cfg.voz === MODEL_KEY); }
+function micHint(){
+  $("#micHint").textContent = vozListo()
+    ? "Tocá “Dictar” y decí cada distancia con una pausa corta entre una y otra. Funciona sin señal."
+    : (SR ? "Con señal podés usar “Dictar”. Para dictar sin señal, descargá el dictado en Ajustes (una vez, con wifi)."
+          : "Tocá el cuadro y usá el micrófono del teclado. Para dictar sin señal, descargá el dictado en Ajustes.");
+  $("#btnMic").hidden = !(vozListo() || SR);
+}
+function setMicUI(on, txt){
+  $("#btnMic").classList.toggle("on", on); $("#micTxt").textContent = txt || (on ? "Escuchando… tocá para parar" : "Dictar");
+  $("#iDist").classList.toggle("listen", on); if(!on) $("#interim").textContent = "";
+}
+function useKeyboard(msg){
+  if(padOn) padShow(false); const t=$("#iDist"); t.setAttribute("inputmode","text");
+  t.focus(); t.setSelectionRange(t.value.length,t.value.length);
+  toast(msg||"Sin señal: tocá el micrófono 🎤 del teclado y dictá los números.",5500);
+}
+/* agrega números reconocidos al surco actual (como cifras) */
+/* Agrega lo dictado sin aceptar nunca un valor menor o igual al anterior.
+   Si un número llega partido (p. ej. "4" y "20" en lugar de 420, o "400" y "20"), intenta unirlo. */
+let pend=null, pendT=null, ultT=0, ultSurco=-1;
+function escribirVals(v){
+  const ta=$("#iDist"); ta.value = v.length ? v.join(" ")+" " : ""; ta.dispatchEvent(new Event("input"));
+}
+function avisoDictado(t){ $("#interim").textContent = t; }
+function aplicarAlt(){   // "300" + "5" sin nada más → 305
+  const v = parseNums(cur.surcos[curS].texto); const a = pend.alt; pend=null; clearTimeout(pendT);
+  v[v.length-1] = a; escribirVals(v); ultT = Date.now(); avisoDictado(`✓ ${a}`); buzz(15);
+}
+function vencePend(){ if(!pend) return; if(pend.alt!=null) aplicarAlt(); else descartarPend(); }
+function descartarPend(motivo){
+  if(!pend) return; clearTimeout(pendT);
+  const v = parseNums(cur.surcos[curS].texto), last = v.length ? v[v.length-1] : 0;
+  toast(`Se descartó ${pend.val}: ${motivo||`es menor que ${last} (planta anterior)`}. Repetí ese valor.`,3500); buzz([90,50,90]);
+  pend=null;
+}
+function aceptarNumero(x){
+  if(curS!==ultSurco){ pend=null; clearTimeout(pendT); ultSurco=curS; ultT=0; }
+  const v = parseNums(cur.surcos[curS].texto), n = db.cfg.nPl;
+  if(v.length >= n) return;
+  const last = v.length ? v[v.length-1] : 0, ahora = Date.now();
+  // 1) completar un pedazo pendiente con lo que llega ahora
+  if(pend){
+    const p = pend.val; let c = null;
+    if(p < 10 && x < 100) c = p*100 + x;                         // "4" + "20" → 420
+    else if(p % 100 === 0 && p < 1000 && x < 100) c = p + x;      // "400" + "20" → 420
+    else if(p >= 20 && p < 100 && p % 10 === 0 && x < 10) c = p + x; // "40" + "5" → 45
+    clearTimeout(pendT);
+    if(c != null && c > last){ pend=null; v.push(c); escribirVals(v); ultT=ahora; avisoDictado(`✓ ${c} (se unió ${p} + ${x})`); buzz(15); return; }
+    if(pend.alt!=null){ aplicarAlt(); return aceptarNumero(x); }
+    descartarPend();
+  }
+  // 2) caso normal
+  if(x > last){ v.push(x); escribirVals(v); ultT=ahora; return; }
+  // 3) menor o igual al anterior: ¿es la segunda mitad del último número?
+  if(v.length && ahora - ultT < 3000){
+    const prev2 = v.length>1 ? v[v.length-2] : 0;
+    let c = null;
+    if(last % 100 === 0 && x < 100) c = last + x;                         // "400" ya cargado + "20"
+    else if(last % 10 === 0 && last % 100 !== 0 && x < 10) c = last + x;  // "340" + "5"
+    if(c != null && c > prev2){
+      if(x >= 10){ v[v.length-1] = c; escribirVals(v); ultT=ahora; avisoDictado(`✓ ${c} (se unió ${last} + ${x})`); buzz(15); return; }
+      // un solo dígito: puede ser "4" de "420" o "5" de "305" → se espera el resto un momento
+      pend = { val:x, alt:c }; avisoDictado(`${x}… esperando el resto del número`);
+      pendT = setTimeout(vencePend, 2500); return;
+    }
+  }
+  // 4) puede ser el comienzo de un número partido: se espera el resto un momento
+  pend = { val:x }; avisoDictado(`${x}… esperando el resto del número`);
+  pendT = setTimeout(vencePend, 3000);
+}
+function agregarNumeros(txt){
+  const nums = parseNums(txt); if(!nums.length) return;
+  for(const x of nums) aceptarNumero(x);
+}
+function stopMic(){
+  recOn=false;
+  const r=rec; rec=null; if(r){ try{ r.abort(); }catch(e){} }
+  vozStop();
+  setMicUI(false);
+}
+
+/* ---- 1) dictado propio (Vosk) ---- */
+let vModel=null, vLoading=null, vCtx=null, vStream=null, vNode=null, vRec=null;
+async function vozCargar(){
+  if(vModel) return vModel;
+  if(!vLoading){
+    vLoading = (async () => {
+      if(!window.Vosk) throw new Error("sin libreria");
+      // con la clave fija, si el modelo ya está guardado en el celular no se descarga nada
+      const m = await Vosk.createModel("./modelo-no-descargado.tar.gz#k="+MODEL_KEY, 0);
+      vModel = m; return m;
+    })().catch(e=>{ vLoading=null; throw e; });
+  }
+  return vLoading;
+}
+async function vozStart(){
+  setMicUI(true, "Preparando dictado…");
+  try{
+    const model = await vozCargar();
+    if(!recOn) return;
+    vStream = await navigator.mediaDevices.getUserMedia({ video:false, audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1 } });
+    vCtx = new (window.AudioContext||window.webkitAudioContext)();
+    await vCtx.resume();
+    vRec = new model.KaldiRecognizer(vCtx.sampleRate, GRAMATICA);
+    try{ vRec.setWords(true); }catch(e){}
+    vRec.on("result", m => {
+      if(!recOn || !m.result) return;
+      const w = Array.isArray(m.result.result) ? m.result.result : null;
+      let t = m.result.text || "";
+      if(w && w.length){   // con viento aparecen "palabras" de baja confianza: se ignoran
+        const buenas = w.filter(x => x.word !== "[unk]" && (x.conf==null || x.conf >= 0.55));
+        if(buenas.length < w.filter(x=>x.word!=="[unk]").length) avisoDictado(buenas.length ? "Se ignoró una parte con ruido" : "No se entendió (ruido). Repetí el valor.");
+        else avisoDictado("");
+        t = buenas.map(x=>x.word).join(" ");
+      } else avisoDictado("");
+      if(t) agregarNumeros(t);
+    });
+    vRec.on("partialresult", m => { if(recOn) $("#interim").textContent = (m.result && m.result.partial) || ""; });
+    const src = vCtx.createMediaStreamSource(vStream);
+    vNode = vCtx.createScriptProcessor(4096, 1, 1);
+    vNode.onaudioprocess = ev => { if(recOn && vRec){ try{ vRec.acceptWaveform(ev.inputBuffer); }catch(e){} } };
+    // filtro para el viento: corta los graves (el ruido del viento es casi todo de baja frecuencia)
+    const hp1 = vCtx.createBiquadFilter(); hp1.type="highpass"; hp1.frequency.value=200; hp1.Q.value=0.7;
+    const hp2 = vCtx.createBiquadFilter(); hp2.type="highpass"; hp2.frequency.value=200; hp2.Q.value=0.7;
+    src.connect(hp1); hp1.connect(hp2); hp2.connect(vNode); vNode.connect(vCtx.destination);
+    if(!recOn){ vozStop(); return; }
+    setMicUI(true); buzz(30);
+  }catch(e){
+    const perm = e && (e.name==="NotAllowedError"||e.name==="SecurityError");
+    stopMic();
+    if(perm) toast("Sin permiso para el micrófono. Habilitalo en los permisos de la app o del navegador.",5000);
+    else { db.cfg.voz=null; save(); micHint(); toast("No se encontró el dictado guardado en este celular. Descargalo de nuevo en Ajustes con wifi.",6000); }
+  }
+}
+function vozStop(){
+  try{ if(vRec){ vRec.remove(); } }catch(e){} vRec=null;
+  try{ if(vNode){ vNode.disconnect(); vNode.onaudioprocess=null; } }catch(e){} vNode=null;
+  try{ if(vStream){ vStream.getTracks().forEach(t=>t.stop()); } }catch(e){} vStream=null;
+  try{ if(vCtx){ vCtx.close(); } }catch(e){} vCtx=null;
+}
+
+/* descarga única: zip de Hugging Face -> tar.gz -> la librería lo guarda en el celular */
+function tarGz(files){
+  const enc = new TextEncoder(), parts = []; let total = 0;
+  // la librería descarta la primera carpeta del archivo: si el zip no la trae, se agrega
+  const tops = new Set(Object.keys(files).map(p=>p.split("/")[0]));
+  if(tops.size!==1 || Object.keys(files).some(p=>!p.includes("/"))){ const f2={}; for(const p of Object.keys(files)) f2["model/"+p]=files[p]; files=f2; }
+  const dirs = new Set();
+  for(const p of Object.keys(files)){ const segs=p.split("/"); for(let i=1;i<segs.length;i++) dirs.add(segs.slice(0,i).join("/")+"/"); }
+  const entries = [...[...dirs].sort().map(d=>[d,null]), ...Object.keys(files).filter(p=>!p.endsWith("/")).sort().map(p=>[p,files[p]])];
+  const oct = (n,len) => n.toString(8).padStart(len-1,"0")+"\0";
+  for(const [name,data] of entries){
+    const h = new Uint8Array(512); const put=(str,off)=>h.set(enc.encode(str),off);
+    let nm=name, prefix="";
+    if(enc.encode(nm).length>100){ const i=nm.lastIndexOf("/", nm.length-2); prefix=nm.slice(0,i); nm=nm.slice(i+1); }
+    put(nm,0); put(data?"0000644\0":"0000755\0",100); put("0000000\0",108); put("0000000\0",116);
+    put(oct(data?data.length:0,12),124); put(oct(Math.floor(Date.now()/1000),12),136);
+    put("        ",148); put(data?"0":"5",156); put("ustar\0",257); put("00",263); put(prefix,345);
+    let sum=0; for(const b of h) sum+=b; put(sum.toString(8).padStart(6,"0")+"\0 ",148);
+    parts.push(h); total+=512;
+    if(data){ parts.push(data); total+=data.length; const pad=(512-data.length%512)%512; if(pad){ parts.push(new Uint8Array(pad)); total+=pad; } }
+  }
+  parts.push(new Uint8Array(1024)); total+=1024;
+  const tar = new Uint8Array(total); let o=0; for(const p of parts){ tar.set(p,o); o+=p.length; }
+  return fflate.gzipSync(tar, { level: 0 });
+}
+let vozBajando=false;
+async function vozDescargar(){
+  if(vozBajando) return;
+  if(!navigator.onLine){ toast("Necesitás señal (mejor wifi) para descargar el dictado."); return; }
+  vozBajando=true; renderVoz();
+  const bar=$("#vozBar"), bi=$("#vozBarI"), info=$("#vozInfo");
+  const paso = (t,p) => { info.textContent=t; if(p!=null){ bar.hidden=false; bi.style.width=Math.round(p*100)+"%"; } };
+  try{
+    paso("Descargando… 0%",0);
+    const r = await fetch(MODEL_URL);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const tot = parseInt(r.headers.get("content-length")||"0",10) || 39817833;
+    const rd = r.body.getReader(); const chunks=[]; let got=0;
+    for(;;){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); got+=value.length; paso(`Descargando… ${Math.min(99,Math.round(got/tot*100))}% (${(got/1048576).toFixed(0)} de ${(tot/1048576).toFixed(0)} MB)`, Math.min(.99,got/tot)*0.8); }
+    const zip = new Uint8Array(got); let o=0; for(const c of chunks){ zip.set(c,o); o+=c.length; }
+    paso("Preparando el dictado… (puede tardar un minuto)", .85);
+    await new Promise(r=>setTimeout(r,50));
+    const files = fflate.unzipSync(zip);
+    const gz = tarGz(files);
+    paso("Guardando en el celular…", .92);
+    const url = URL.createObjectURL(new Blob([gz],{type:"application/gzip"}));
+    try{ if(vModel){ vModel.terminate(); } }catch(e){} vModel=null; vLoading=null;
+    const m = await Vosk.createModel(url+"#k="+MODEL_KEY, 0);
+    URL.revokeObjectURL(url);
+    vModel = m; vLoading = Promise.resolve(m);
+    db.cfg.voz = MODEL_KEY; save();
+    try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    paso("", 1); toast("Listo: ya podés dictar sin señal",4000);
+  }catch(e){
+    info.textContent = "No se pudo descargar ("+(e&&e.message||e)+"). Probá de nuevo con wifi.";
+  }
+  vozBajando=false; renderVoz(); micHint(); renderHome();
+}
+function renderVoz(){
+  const b=$("#btnVoz"), info=$("#vozInfo");
+  if(vozBajando){ b.disabled=true; b.textContent="Descargando…"; return; }
+  $("#vozBar").hidden=true; b.disabled=false;
+  if(vozListo()){ info.innerHTML="<b>✓ Dictado sin señal instalado en este celular.</b> Si alguna vez falla, volvé a descargarlo."; b.className="btn"; b.textContent="Volver a descargar"; }
+  else { if(!info.textContent || info.textContent.startsWith("✓")) info.textContent="Todavía no está descargado en este celular."; b.className="btn primary"; b.textContent="Descargar dictado sin señal (40 MB)"; }
+}
+$("#btnVoz").onclick = vozDescargar;
+$("#btnVozHome").onclick = () => { show("cfg"); renderCfg(); vozDescargar(); };
+
+/* ---- 2) reconocimiento del navegador (con señal) ---- */
+function collapse(parts){
+  const out=[];
+  for(const p0 of parts){ const p=p0.trim(); if(!p) continue;
+    const prev=out.join(" ");
+    if(prev && (p===prev || p.startsWith(prev))){ out.length=0; out.push(p); }
+    else if(out.length && out[out.length-1]===p) continue;
+    else out.push(p);
+  }
+  return out.join(" ");
+}
+function startSession(){
+  const r = new SR(); rec = r;
+  r.lang = "es-AR"; r.continuous = false; r.interimResults = true; r.maxAlternatives = 1;
+  let hechos = 0;
+  r.onresult = ev => {
+    if(rec!==r) return;
+    const fin=[]; let interim="";
+    for(let i=0;i<ev.results.length;i++){ const t=ev.results[i][0].transcript; if(ev.results[i].isFinal) fin.push(t); else interim=t; }
+    const nums = parseNums(collapse(fin));
+    if(nums.length > hechos){ nums.slice(hechos).forEach(aceptarNumero); hechos = nums.length; }
+    if(rec===r && interim) $("#interim").textContent = interim;
+  };
+  r.onerror = ev => {
+    if(rec!==r) return;
+    if(ev.error==="no-speech"||ev.error==="aborted") return;
+    stopMic();
+    if(ev.error==="network"||!navigator.onLine) useKeyboard("Este dictado necesita señal. Descargá el dictado sin señal en Ajustes cuando tengas wifi.");
+    else if(ev.error==="not-allowed") toast("Sin permiso para el micrófono. Habilitalo en los permisos del navegador.",5000);
+    else useKeyboard("El dictado se detuvo. Podés seguir con el micrófono 🎤 del teclado.");
+  };
+  r.onend = () => { if(rec===r && recOn){ $("#interim").textContent=""; setTimeout(()=>{ if(rec===r && recOn) startSession(); }, 150); } };
+  try{ r.start(); }catch(e){ stopMic(); useKeyboard("No se pudo iniciar el dictado. Usá el micrófono 🎤 del teclado."); }
+}
+
+/* ---- botón Dictar ---- */
+function startMic(){
+  const r = calc(parseNums(cur.surcos[curS].texto), num(cur.esp), num(cur.dens), db.cfg.nPl);
+  if(r.n >= db.cfg.nPl){ toast(`Este surco ya tiene las ${db.cfg.nPl} distancias. Borrá con “⌫ Último” si querés corregir.`,4000); return; }
+  $("#iDist").blur(); if(padOn){ db.cfg.pad=false; save(); padShow(false); }
+  if(vozListo()){ recOn=true; vozStart(); return; }
+  if(SR && navigator.onLine){ recOn=true; setMicUI(true); buzz(30); startSession(); return; }
+  useKeyboard("Para dictar sin señal, descargá el dictado en Ajustes una vez con wifi. Mientras tanto, probá el micrófono 🎤 del teclado.");
+}
+$("#btnMic").onclick = () => { if(recOn){ stopMic(); return; } startMic(); };
+
+/* ---------------- pantalla activa ---------------- */
+let lock=null;
+async function wake(on){ try{ if(on && "wakeLock" in navigator && !lock){ lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release",()=>lock=null); } if(!on && lock){ lock.release(); lock=null; } }catch(e){} }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && view==="surcos") wake(true); });
+
+/* ---------------- resumen ---------------- */
+function renderRes(){
+  const ev=cur, R=evalCalc(ev);
+  $("#rTitle").textContent = `${ev.lote||"Sin lote"}${ev.ambiente?" · "+ev.ambiente:""}`;
+  $("#rCtx").textContent = `${fmtFecha(ev.fecha)} · ${ev.campo||""} · ${ev.cultivo}${ev.ef?" · "+ev.ef:""} · ${R.nOk} de ${ev.surcos.length} surcos completos`;
+  const st = (l,v,u="",big="") => `<div class="stat ${big}"><div class="l">${l}</div><div class="n">${v}${u?` <small>${u}</small>`:""}</div></div>`;
+  $("#rStats").innerHTML = st("Plantas logradas", f0(R.plha), "pl/ha", "big") + st("Logro", fp(R.logro)) + st("Dist. media", f1(R.media), "cm") + st("CV", fp(R.cv)) +
+    st("Dobles", fp(R.dob)) + st("Fallas", fp(R.fal)) + st("Uniformidad", fp(R.unif));
+  let t = `<thead><tr><th>Surco</th><th>pl/ha</th><th>DP cm</th><th>Desv.</th><th>CV</th><th>Dobles</th><th>Fallas</th><th>Unif.</th></tr></thead><tbody>`;
+  R.rs.forEach((r,i)=>{ t += r.ok ? `<tr><td>${i+1}${ev.surcos[i].sector?" · "+esc(ev.surcos[i].sector):""}</td><td>${f0(r.plha)}</td><td>${f1(r.media)}</td><td>${f1(r.desv)}</td><td>${fp(r.cv)}</td><td>${fp(r.dob)}</td><td>${fp(r.fal)}</td><td>${fp(r.unif)}</td></tr>`
+    : `<tr><td>${i+1}</td><td colspan="7" style="text-align:left;color:var(--warn)">${r.n?`incompleto (${r.n}/${db.cfg.nPl})`:"sin datos"}</td></tr>`; });
+  t += `</tbody><tfoot><tr><td>Promedio</td><td>${f0(R.plha)}</td><td>${f1(R.media)}</td><td>${f1(R.desv)}</td><td>${fp(R.cv)}</td><td>${fp(R.dob)}</td><td>${fp(R.fal)}</td><td>${fp(R.unif)}</td></tr></tfoot>`;
+  $("#rTbl").innerHTML = t;
+  const kv = [["Empresa",ev.empresa],["Antecesor",ev.antecesor],["Contratista",ev.contratista],["Sembradora",ev.sembradora],["Genética",ev.genetica],["Espaciamiento",ev.esp?String(ev.esp).replace(".",",")+" cm":""],["Densidad",ev.dens?f0(num(ev.dens))+" sem/ha":""],["Técnico",ev.tecnico],["GPS",ev.lat!=null?`${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)}`:""],["Observaciones",ev.obs]];
+  $("#rKv").innerHTML = kv.filter(k=>k[1]).map(k=>`<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join("");
+}
+
+/* ---------------- exportar ---------------- */
+const dec = v => v==null ? "" : String(+v.toFixed(6)).replace(".",",");
+function csvCell(v){ v = v==null ? "" : String(v); return /[";\n\r]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v; }
+function toCSV(rows){ return "﻿" + rows.map(r=>r.map(csvCell).join(";")).join("\r\n"); }
+function buildExport(evs){
+  const n = db.cfg.nPl;
+  const head = ["ID_Evaluacion","Fecha","Tecnico","Empresa","Campo","Lote","Cultivo","Ambiente","Estado_fenologico","Antecesor","Contratista","Sembradora","Espaciamiento_cm","Densidad_siembra","Latitud","Longitud","Observaciones","Genetica"];
+  const hv = ev => [ev.id, fmtFecha(ev.fecha), ev.tecnico, ev.empresa, ev.campo, ev.lote, ev.cultivo, ev.ambiente, ev.ef, ev.antecesor, ev.contratista, ev.sembradora, dec(num(ev.esp)), dec(num(ev.dens)), dec(ev.lat), dec(ev.lon), ev.obs, ev.genetica||""];
+  const D = Array.from({length:n},(_,i)=>"D"+String(i+1).padStart(2,"0"));
+  const s = [[...head,"Surco","Sector",...D,"Estado","Dist_media","Plantas_ha","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
+  const r = [[...head,"Surcos_completos","Plantas_ha","Pct_logro","Dist_media","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
+  for(const ev of evs){
+    const R = evalCalc(ev);
+    ev.surcos.forEach((su,i)=>{ const c=R.rs[i]; if(!c.n) return;
+      s.push([...hv(ev), i+1, su.sector, ...D.map((_,k)=>c.vals[k]??""), c.ok?"OK":"INCOMPLETO", dec(c.media), dec(c.plha), dec(c.desv), dec(c.cv), dec(c.dob), dec(c.fal), dec(c.unif)]); });
+    r.push([...hv(ev), R.nOk, dec(R.plha), dec(R.logro), dec(R.media), dec(R.desv), dec(R.cv), dec(R.dob), dec(R.fal), dec(R.unif)]);
+  }
+  return { surcos: toCSV(s), resumen: toCSV(r), json: JSON.stringify({app:"recuentos-implantacion", version:VERSION, exportado:new Date().toISOString(), evals:evs}, null, 1) };
+}
+async function doExport(all){
+  const evs = all ? db.evals : db.evals.filter(e=>!e.exportado);
+  if(!evs.length){ toast("No hay evaluaciones para exportar"); return; }
+  const x = buildExport(evs), st = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/^(\d{8})(\d{4})$/,"$1_$2");
+  const files = [ new File([x.surcos], `implantacion_surcos_${st}.csv`, {type:"text/csv"}),
+                  new File([x.resumen], `implantacion_resumen_${st}.csv`, {type:"text/csv"}),
+                  new File([x.json], `implantacion_respaldo_${st}.json`, {type:"application/json"}) ];
+  let ok=false;
+  try{
+    if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:"Recuentos de implantación", text:`${evs.length} evaluaciones de implantación`}); ok=true; }
+  }catch(e){ if(e.name==="AbortError"){ toast("Exportación cancelada"); return; } }
+  if(!ok){ for(const f of files){ const a=document.createElement("a"); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); } ok=true; }
+  const t = Date.now(); evs.forEach(e=>e.exportado=t); save(); renderHome(); toast(evs.length===1?"1 evaluación exportada":`${evs.length} evaluaciones exportadas`);
+}
+$("#btnExpPend").onclick = () => doExport(false);
+$("#btnExpAll").onclick = () => doExport(true);
+
+/* ---------------- ajustes ---------------- */
+function renderCfg(){
+  $("#cPl").value = db.cfg.nPl; $("#cSur").value = db.cfg.nSur; $("#cTec").value = db.cfg.tec||"";
+  $("#lotesInfo").textContent = `${lotes().length} lotes cargados${db.lotesFecha?` (${db.lotesOrigen==="planilla"?"bajada de la planilla":"desde CSV"} el ${new Date(db.lotesFecha).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})})`:" (lista original de la planilla 25-26)"}.`;
+  $("#verInfo").textContent = `Versión ${VERSION} · ${db.evals.length} evaluaciones guardadas en este celular.`;
+  renderVoz();
+  $("#cUrl").value = db.cfg.url || "";
+  $("#cLotesUrl").value = db.cfg.lotesUrl ?? LOTES_CSV_URL;
+}
+function readCfg(){
+  const p=parseInt($("#cPl").value,10), s=parseInt($("#cSur").value,10);
+  if(p>=5&&p<=40) db.cfg.nPl=p; if(s>=1&&s<=20) db.cfg.nSur=s; db.cfg.tec=$("#cTec").value.trim(); save();
+}
+["cPl","cSur","cTec"].forEach(i=>$("#"+i).addEventListener("change",readCfg));
+$("#fLotes").onchange = async e => {
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const L = lotesDeCSV(await f.text());
+    db.lotes=L; db.lotesFecha=Date.now(); db.lotesOrigen="csv"; save(); renderCfg(); toast(`${L.length} lotes cargados`);
+  }catch(err){ toast("No se pudo leer el archivo: "+(err.message||"tiene que ser CSV con una columna “Lote”."),5000); }
+  e.target.value="";
+};
+$("#fBackup").onchange = async e => {
+  const f=e.target.files[0]; if(!f) return;
+  try{ const o=JSON.parse(await f.text()); let a=0,u=0;
+    for(const ev of (o.evals||[])){ const i=db.evals.findIndex(x=>x.id===ev.id); if(i<0){ db.evals.push(ev); a++; } else if((ev.actualizado||0)>(db.evals[i].actualizado||0)){ db.evals[i]=ev; u++; } }
+    save(); renderCfg(); toast(`${a} evaluaciones agregadas, ${u} actualizadas`);
+  }catch(err){ toast("El archivo no es un respaldo válido",4000); }
+  e.target.value="";
+};
+
+/* ---------------- señal / instalación / offline ---------------- */
+function net(){ const on=navigator.onLine; const p=$("#net"); p.textContent = on?"Con señal":"Sin señal"; p.classList.toggle("off",!on); if(typeof renderSync==="function" && view==="home") try{ renderSync(); }catch(e){} }
+addEventListener("online",net); addEventListener("offline",net);
+let deferred=null;
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferred=e; if(!standalone){ $("#installBanner").hidden=false; $("#btnInstall").hidden=false; $("#installTxt").textContent="Instalá la app en el celular para usarla sin señal."; } });
+$("#btnInstall").onclick = async ()=>{ if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred=null; $("#installBanner").hidden=true; };
+if(!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent)){ $("#installBanner").hidden=false; $("#installTxt").innerHTML="Para usarla sin señal: en Safari tocá <b>Compartir</b> › <b>Agregar a inicio</b>, y abrila desde ese ícono."; }
+if("serviceWorker" in navigator && location.protocol!=="file:"){
+  navigator.serviceWorker.register("sw.js").then(r=>{ r.addEventListener("updatefound",()=>{ const w=r.installing; w&&w.addEventListener("statechange",()=>{ if(w.state==="installed" && navigator.serviceWorker.controller) toast("Hay una versión nueva: se aplica la próxima vez que abras la app",5000); }); }); }).catch(()=>{});
+}
+
+/* ---------------- envío automático a la planilla de Google ---------------- */
+let syncing=false;
+const r6 = v => v==null || !isFinite(v) ? "" : Math.round(v*1e6)/1e6;
+function campania(f){ if(!f) return ""; const y=+f.slice(0,4), m=+f.slice(5,7); const a = m>=7 ? y : y-1; return `${String(a).slice(2)}-${String(a+1).slice(2)}`; }
+function payload(ev){
+  const R = evalCalc(ev), n = db.cfg.nPl;
+  const base = { ID_Evaluacion: ev.id, Fecha: ev.fecha, Campania: campania(ev.fecha), Tecnico: ev.tecnico, Empresa: ev.empresa, Campo: ev.campo, Lote: ev.lote,
+    Cultivo: ev.cultivo, Ambiente: ev.ambiente, Estado_fenologico: ev.ef, Antecesor: ev.antecesor, Contratista: ev.contratista, Sembradora: ev.sembradora, Genetica: ev.genetica||"",
+    Espaciamiento_cm: r6(num(ev.esp)), Densidad_siembra: r6(num(ev.dens)) };
+  const evaluacion = Object.assign({}, base, { Latitud: r6(ev.lat), Longitud: r6(ev.lon), Observaciones: ev.obs,
+    Surcos_completos: R.nOk, Plantas_ha: r6(R.plha), Pct_logro: r6(R.logro), Dist_media: r6(R.media), Desvio: r6(R.desv), CV: r6(R.cv),
+    Pct_dobles: r6(R.dob), Pct_fallas: r6(R.fal), Uniformidad: r6(R.unif), Actualizado: new Date(ev.actualizado||Date.now()).toISOString(), Version_app: VERSION });
+  const surcos = [];
+  ev.surcos.forEach((su,i)=>{ const c = R.rs[i]; if(!c.n) return;
+    const row = { ID_Evaluacion: ev.id, Fecha: ev.fecha, Campania: base.Campania, Empresa: ev.empresa, Campo: ev.campo, Lote: ev.lote, Cultivo: ev.cultivo, Ambiente: ev.ambiente,
+      Surco: i+1, Sector: su.sector||"" };
+    for(let k=0;k<n;k++) row["D"+String(k+1).padStart(2,"0")] = c.vals[k] ?? "";
+    Object.assign(row, { Estado: c.ok ? "OK" : "INCOMPLETO", Dist_media: r6(c.media), Plantas_ha: r6(c.plha), Desvio: r6(c.desv), CV: r6(c.cv),
+      Pct_dobles: r6(c.dob), Pct_fallas: r6(c.fal), Uniformidad: r6(c.unif) });
+    surcos.push(row); });
+  return { evaluacion, surcos };
+}
+function porEnviar(){ return db.evals.filter(e => (e.lote||"").trim() && (!e.enviado || (e.actualizado||0) > e.enviado)); }
+async function sync(manual){
+  const url = (db.cfg.url||"").trim();
+  if(!url){ if(manual) toast("Primero cargá la dirección de envío en Ajustes."); return; }
+  if(syncing) return;
+  if(!navigator.onLine){ if(manual) toast("Sin señal: se envía sola cuando vuelva la conexión."); return; }
+  const evs = porEnviar();
+  if(!evs.length){ if(manual) toast("Todo está enviado ✓"); renderSync(); return; }
+  syncing = true; renderSync();
+  const t0 = Date.now(); let enviadas = 0;
+  try{
+    for(let i=0;i<evs.length;i+=10){
+      const grupo = evs.slice(i,i+10);
+      const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 30000);
+      const r = await fetch(url, { method:"POST", body: JSON.stringify({ app:"recuentos-implantacion", version:VERSION, evals: grupo.map(payload) }), signal: ctl.signal });
+      clearTimeout(to);
+      let j; try{ j = await r.json(); }catch(e){ throw new Error("la planilla no respondió bien (revisá la dirección)"); }
+      if(!j.ok) throw new Error(j.error || "error en la planilla");
+      grupo.forEach(e => e.enviado = t0); enviadas += grupo.length; save();
+    }
+    db.cfg.ultEnvio = Date.now(); db.cfg.errEnvio = ""; save();
+    if(manual) toast(enviadas===1 ? "1 evaluación enviada a la planilla" : `${enviadas} evaluaciones enviadas a la planilla`);
+  }catch(e){
+    db.cfg.errEnvio = (e.name==="AbortError") ? "la señal es muy débil, se reintenta solo" : (e.message||String(e)); save();
+    if(manual) toast("No se pudo enviar: " + db.cfg.errEnvio, 5000);
+  }
+  syncing = false; if(view==="home") renderHome(); else renderSync();
+}
+function renderSync(){
+  const box = $("#syncBox"); if(!box) return;
+  const url = (db.cfg.url||"").trim(), pend = porEnviar().length;
+  const hora = t => t ? new Date(t).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "";
+  let cls="status", txt, btn=false;
+  if(!url){ cls="status part"; txt = "El envío automático todavía no está configurado. Cargá la dirección de la planilla en Ajustes."; }
+  else if(syncing){ cls="status"; txt = "Enviando a la planilla…"; }
+  else if(!pend){ cls="status ok"; txt = "✓ Todo enviado a la planilla" + (db.cfg.ultEnvio ? ` · último envío ${hora(db.cfg.ultEnvio)}` : ""); }
+  else { cls="status part"; btn=true;
+    txt = `${pend} ${pend===1?"evaluación":"evaluaciones"} por enviar. ` + (navigator.onLine ? (db.cfg.errEnvio ? `No se pudo enviar: ${db.cfg.errEnvio}.` : "Se envían solas.") : "Se envían solas cuando haya señal."); }
+  box.className = cls; box.textContent = txt;
+  $("#btnSync").hidden = !btn || !navigator.onLine;
+}
+$("#btnSync").onclick = () => sync(true);
+$("#btnTestUrl").onclick = async () => {
+  const url = $("#cUrl").value.trim(); db.cfg.url = url; save();
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)){ toast("La dirección tiene que empezar con https://script.google.com/…",5000); return; }
+  if(!navigator.onLine){ toast("Necesitás señal para probar la conexión."); return; }
+  $("#urlInfo").textContent = "Probando…";
+  try{ const r = await fetch(url); const j = await r.json(); if(!j.ok) throw 0; $("#urlInfo").textContent = "✓ Conexión correcta con la planilla."; sync(true); bajarLotes(true); }
+  catch(e){ $("#urlInfo").textContent = "No responde. Revisá que copiaste la dirección completa (termina en /exec) y que el acceso sea “Cualquier usuario”."; }
+};
+$("#cUrl").addEventListener("change", e => { db.cfg.url = e.target.value.trim(); db.cfg.errEnvio=""; save(); sync(false); });
+$("#btnResend").onclick = () => { db.evals.forEach(e => e.enviado = null); save(); toast("Se van a enviar de nuevo todas las evaluaciones"); sync(true); };
+addEventListener("online", () => setTimeout(()=>sync(false), 1500));
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible") sync(false); });
+setInterval(() => { if(document.visibilityState==="visible") sync(false); }, 120000);
+
+/* ---------------- lista de lotes desde la planilla (CSV publicado) ---------------- */
+// Hoja con una fila por lote y ambiente: EMPRESA | Campo | Lote | Ambiente | Cultivo | Antecesor | Espaciamiento (cm) | Densidad (pl/m² o sem/ha)
+// Se guarda un lote por Empresa+Campo+Lote: [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens, {ambiente: dens}]
+let bajandoLotes=false;
+function csvFilas(txt){
+  txt = txt.replace(/^﻿/,"");
+  const l1 = txt.slice(0, txt.indexOf("\n")>0?txt.indexOf("\n"):txt.length);
+  const sep = (l1.match(/;/g)||[]).length > (l1.match(/,/g)||[]).length ? ";" : ",";
+  const rows=[]; let row=[], c="", q=false;
+  for(let i=0;i<txt.length;i++){ const ch=txt[i];
+    if(q){ if(ch==='"'){ if(txt[i+1]==='"'){ c+='"'; i++; } else q=false; } else c+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===sep){ row.push(c.trim()); c=""; }
+    else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&txt[i+1]==="\n") i++; row.push(c.trim()); c=""; if(row.some(x=>x)) rows.push(row); row=[]; }
+    else c+=ch; }
+  row.push(c.trim()); if(row.some(x=>x)) rows.push(row);
+  return rows;
+}
+const ambCodigo = v => {   // "ML 2 (70-80% arena)" o "ML2" → "ML2"
+  const k = x => String(x||"").split("(")[0].toLowerCase().replace(/[^a-z0-9]/g,"");
+  const a = DATA.ambientes.find(a => k(a[0])===k(v) || k(a[1])===k(v)); return a ? a[0] : "";
+};
+function lotesDeCSV(txt){
+  const rows = csvFilas(txt); if(rows.length<2) throw new Error("la hoja está vacía");
+  const h = rows[0].map(x=>x.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim());
+  const ix = k => h.findIndex(x=>x.startsWith(k));
+  const iL=ix("lote"), iE=ix("empresa"), iC=ix("campo"), iAm=ix("ambiente"), iCu=ix("cultivo"), iA=ix("antecesor"), iEs=ix("espaciamiento"), iD=ix("densidad");
+  const iG=[ix("genetica"),ix("hibrido"),ix("variedad"),ix("material")].find(i=>i>=0) ?? -1;
+  if(iL<0) throw new Error("no tiene columna “Lote”");
+  const n = v => { let t=String(v??"").trim().replace(/\s/g,"");   // "6,8" · "6.8" · "68.000" · "68000"
+    t = t.includes(",") ? t.replace(/\./g,"").replace(",",".") : (/^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g,"") : t);
+    const x=parseFloat(t); return isFinite(x)&&x>0?x:null; };
+  const nEsp = n;
+  const dm2 = v => { const x=n(v); return x==null?null:(x>1000? x/10000 : x); };   // sem/ha → pl/m²
+  const g = (r,i) => i<0 ? "" : (r[i]||"").trim();
+  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || x.includes("maiz") || x.includes("giras"); };
+  const por = new Map(), L = [];
+  for(const r of rows.slice(1)){
+    const lote=g(r,iL); if(!lote || !cultivoOk(g(r,iCu))) continue;
+    const key=[g(r,iE),g(r,iC),lote].join("|").toLowerCase();
+    let l = por.get(key);
+    if(!l){ l=[lote, g(r,iE), g(r,iC), g(r,iCu), g(r,iA), null, null, {}, ""]; por.set(key,l); L.push(l); }
+    if(l[5]==null) l[5]=nEsp(g(r,iEs));
+    const d=dm2(g(r,iD)), gen=g(r,iG);
+    if(l[6]==null && d!=null) l[6]=d;
+    if(!l[8] && gen) l[8]=gen;
+    const amTxt=g(r,iAm), am=ambCodigo(amTxt) || amTxt;
+    if(am){ const a = l[7][am] || (l[7][am]={d:null,g:""}); if(a.d==null) a.d=d; if(!a.g) a.g=gen; }
+  }
+  if(!L.length) throw new Error("no hay lotes de maíz o girasol");
+  return L;
+}
+async function bajarLotes(manual){
+  const url=(db.cfg.lotesUrl ?? LOTES_CSV_URL).trim();
+  if(!url){ if(manual) toast("Primero cargá la dirección de la lista."); return; }
+  if(!navigator.onLine){ if(manual) toast("Necesitás señal para actualizar la lista."); return; }
+  if(bajandoLotes) return; bajandoLotes=true;
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),30000);
+    const r=await fetch(url,{signal:ctl.signal,cache:"no-store"}); clearTimeout(to);
+    if(!r.ok) throw new Error("la planilla respondió con error "+r.status);
+    const txt=await r.text();
+    if(/^\s*</.test(txt)) throw new Error("la dirección no es un CSV publicado");
+    const L=lotesDeCSV(txt);
+    db.lotes=L; db.lotesFecha=Date.now(); db.lotesOrigen="planilla"; save();
+    if(view==="cfg") renderCfg();
+    if(manual) toast(`✓ ${L.length} lotes actualizados desde la planilla`);
+  }catch(e){ if(manual) toast("No se pudo bajar la lista: "+(e.name==="AbortError"?"la señal es muy débil":(e.message||"revisá la dirección")),5000); }
+  bajandoLotes=false;
+}
+$("#btnLotes").onclick = () => { db.cfg.lotesUrl=$("#cLotesUrl").value.trim(); save(); bajarLotes(true); };
+$("#cLotesUrl").addEventListener("change", e => { db.cfg.lotesUrl=e.target.value.trim(); save(); });
+// automático: al abrir, al volver a la app y al recuperar señal (como mucho cada 30 min)
+const lotesViejos = () => db.lotesOrigen!=="planilla" || !db.lotesFecha || Date.now()-db.lotesFecha > 30*60*1000;
+addEventListener("online", () => { if(lotesViejos()) setTimeout(()=>bajarLotes(false), 3000); });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible" && lotesViejos()) bajarLotes(false); });
+
+// densidad según el ambiente elegido (si la planilla la tiene por ambiente)
+function loteActual(){ if(!cur || !cur.lote) return null;
+  return lotes().find(l => l[0]===cur.lote && (!cur.campo || l[2]===cur.campo) && (!cur.empresa || l[1]===cur.empresa)) || null; }
+// al elegir ambiente: si está en la planilla para ese lote, trae su densidad y genética (después se pueden corregir)
+function datosAmbiente(avisar){
+  const l = loteActual(); if(!l || !cur.ambiente) return;
+  const a = l[7] && l[7][cur.ambiente];
+  if(!a){ if(avisar) toast("Ese ambiente no está en la planilla para este lote: revisá densidad y genética.",4500); return; }
+  if(a.d!=null){ cur.dens=String(Math.round(a.d*10000)); $("#iDens").value=cur.dens; }
+  if(a.g){ cur.genetica=a.g; $("#iGen").value=a.g; }
+  cur.actualizado=Date.now(); save();
+  if(avisar) toast(`Datos de ${cur.ambiente} cargados${a.d!=null?`: ${f0(+cur.dens)} sem/ha`:""}${a.g?` · ${a.g}`:""}`);
+}
+$("#iAmb").addEventListener("change", () => datosAmbiente(true));
+
+/* ---------------- arranque ---------------- */
+load(); net(); micHint(); renderHome(); show("home"); setTimeout(()=>sync(false), 1500); setTimeout(()=>bajarLotes(false), 2500);
+</script>
+</body>
+</html>
