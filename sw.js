@@ -1,7 +1,7 @@
 /* Recuentos de Implantación – service worker (uso sin señal) */
-const CACHE = "recuentos-implantacion-1.5.1";
+const CACHE = "recuentos-implantacion-1.5.2";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./logo.png", "./logo-marca.png", "./vosk.js", "./fflate.js"];
-self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
+self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // Primero lo guardado (abre al instante sin señal); si hay señal, se actualiza en segundo plano.
 self.addEventListener("fetch", e => {
@@ -10,7 +10,7 @@ self.addEventListener("fetch", e => {
   const key = req.mode === "navigate" ? "./index.html" : req;
   e.respondWith(caches.open(CACHE).then(async c => {
     const hit = await c.match(key, { ignoreSearch: true });
-    const net = fetch(req).then(r => { if (r && r.ok) c.put(key, r.clone()); return r; }).catch(() => null);
+    const net = fetch(req, { cache: "no-cache" }).then(r => { if (r && r.ok) c.put(key, r.clone()); return r; }).catch(() => null);
     if (hit) { e.waitUntil(net); return hit; }
     return (await net) || new Response("Sin conexión", { status: 503 });
   }));
