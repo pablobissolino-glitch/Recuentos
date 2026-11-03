@@ -230,17 +230,22 @@ table.sur{border-collapse:collapse;width:100%;font-size:12.5px}
       </table>
       <p>Por debajo del último valor: Deficiente. Se guardan en esta computadora y salen en el informe.</p>
     </details>
-    <label class="fld">Dirección de la planilla (/exec)<input id="url" spellcheck="false" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></label>
+    <details class="crit"><summary>Dirección de la planilla</summary>
+      <p>Viene configurada. Cambiala solo si la planilla tiene una dirección nueva.</p>
+      <input id="url" spellcheck="false" autocomplete="off" style="width:100%" placeholder="https://script.google.com/macros/s/…/exec">
+    </details>
+    <button class="tbtn" id="btnSalir" style="color:var(--ink-2);border-color:var(--line);background:none" hidden>Salir (olvidar la clave)</button>
   </aside>
 
   <main id="main">
     <section class="card empty" id="vacio">
       <h2>Implantación por empresa</h2>
       <p>Lee las evaluaciones de la planilla central y arma el informe de cada empresa: resumen, gráficos y el detalle de cada lote y ambiente, listo para guardar en PDF.</p>
-      <div class="conn">
-        <label class="fld">Dirección de la planilla central (la misma de la app, termina en /exec)<input id="url0" spellcheck="false" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></label>
-        <button class="btn" id="btnLoad">Cargar datos</button>
-      </div>
+      <form class="conn" id="fClave" style="max-width:520px">
+        <label class="fld">Clave del equipo<input id="clave" type="password" autocomplete="current-password" placeholder="Clave para ver los datos"></label>
+        <button class="btn" id="btnLoad" type="submit">Entrar</button>
+      </form>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:10px">La clave queda guardada en esta computadora. Para borrarla, usá “Salir” en el panel de la izquierda.</p>
       <p class="msg" id="msg"></p>
     </section>
 
@@ -318,27 +323,45 @@ function armar(evs, surcos){
 
 /* ---------- datos ---------- */
 let TODO = [], emp = null;
-const urlGuardada = () => store.get("tablero.url", null) || localStorage.getItem("informe.url") || (()=>{ try{ return JSON.parse(localStorage.getItem("implantacion.v1")||"{}").cfg.url || ""; }catch(e){ return ""; } })();
-async function cargar(url){
-  url = (url||"").trim(); const m=$("#msg");
-  if(!url){ m.className="msg bad"; m.textContent="Pegá la dirección de la planilla central (termina en /exec)."; return; }
-  $("#st").textContent = "Cargando…"; m.textContent="";
+
+/* ---------- conexión con la planilla (con clave del equipo) ---------- */
+const DIRECCION = "https://script.google.com/macros/s/AKfycbxgueuu9H07QCoBAr4dhBw9S3sReTt93dgXvwOL8NonnBSkwwyX9soNM2yjqthS1iDO/exec";   // dirección /exec de la planilla central
+const direccion = () => { try{ return localStorage.getItem("implantacion.datosUrl") || DIRECCION; }catch(e){ return DIRECCION; } };
+const claveGuardada = () => { try{ return localStorage.getItem("implantacion.clave") || ""; }catch(e){ return ""; } };
+function guardarClave(c){ try{ c ? localStorage.setItem("implantacion.clave", c) : localStorage.removeItem("implantacion.clave"); }catch(e){} }
+async function pedirDatos(clave){
+  const r = await fetch(direccion(), { method:"POST", body: JSON.stringify({ accion:"datos", clave }) });
+  let j; try{ j = await r.json(); }catch(e){ throw new Error("red"); }
+  if(!j.ok){ const err = new Error(j.error || "error"); throw err; }
+  return j;
+}
+function mensajeError(e){
+  return e.message==="clave" ? "La clave no es correcta." :
+         e.message==="sin-clave" ? "La planilla todavía no tiene una clave configurada (hay que cargarla en el código de Apps Script)." :
+         "No se pudo conectar con la planilla. Revisá la conexión a internet; si sigue, revisá la dirección en “Dirección de la planilla”.";
+}
+
+async function cargar(clave){
+  const m=$("#msg"); clave = (clave||"").trim();
+  if(!clave){ m.className="msg bad"; m.textContent="Ingresá la clave del equipo."; return; }
+  $("#st").textContent = "Cargando…"; m.textContent=""; $("#btnLoad").disabled = true;
   try{
-    const r = await fetch(url + (url.includes("?")?"&":"?") + "accion=datos"); const j = await r.json();
-    if(!j.ok || !Array.isArray(j.evaluaciones)) throw new Error();
-    store.set("tablero.url", url); $("#url").value = url;
+    const j = await pedirDatos(clave);
+    guardarClave(clave);
     TODO = armar(j.evaluaciones, j.surcos||[]);
     $("#st").textContent = `${TODO.length} evaluaciones · ${new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})}`;
-    $("#btnReload").hidden = false;
+    $("#btnReload").hidden = false; $("#btnSalir").hidden = false;
     empresas();
   }catch(e){
-    $("#st").textContent = ""; m.className="msg bad";
-    m.textContent = "No se pudieron leer los datos. Revisá la dirección y que la planilla tenga el código con la lectura de datos (?accion=datos).";
+    $("#st").textContent = ""; if(e.message==="clave") guardarClave("");
+    TODO = []; render(); m.className="msg bad"; m.textContent = mensajeError(e);
   }
+  $("#btnLoad").disabled = false;
 }
-$("#btnLoad").onclick = () => cargar($("#url0").value);
-$("#btnReload").onclick = () => cargar($("#url").value);
-$("#url").addEventListener("change", e => cargar(e.target.value));
+$("#fClave").addEventListener("submit", ev => { ev.preventDefault(); cargar($("#clave").value); });
+$("#btnReload").onclick = () => cargar(claveGuardada());
+$("#btnSalir").onclick = () => { guardarClave(""); TODO=[]; $("#btnReload").hidden=true; $("#btnSalir").hidden=true; $("#st").textContent=""; $("#clave").value=""; render(); $("#empList").innerHTML=""; };
+$("#url").addEventListener("change", e => { const v=e.target.value.trim(); try{ (v && v!==DIRECCION) ? localStorage.setItem("implantacion.datosUrl", v) : localStorage.removeItem("implantacion.datosUrl"); }catch(x){} if(claveGuardada()) cargar(claveGuardada()); });
 
 function empresas(){
   const c = {}; TODO.forEach(R => c[R.empresa] = (c[R.empresa]||0)+1);
@@ -659,8 +682,8 @@ $("#btnPdf").onclick = () => {
 
 /* ---------- arranque ---------- */
 critUI();
-const u = urlGuardada(); $("#url").value = u; $("#url0").value = u;
-if(u) cargar(u);
+$("#url").value = direccion();
+if(claveGuardada()) cargar(claveGuardada());
 </script>
 </body>
 </html>

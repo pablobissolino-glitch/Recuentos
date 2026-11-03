@@ -55,11 +55,15 @@ tr.off td{color:var(--muted)}
 <main>
   <section class="step">
     <h2><span>1</span>Datos de la planilla central</h2>
-    <div class="row">
-      <label class="f" style="flex:4 1 360px">Dirección de envío (la misma que en la app, termina en /exec)
-        <input id="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false"></label>
-      <button class="btn primary" id="btnCargar">Cargar datos</button>
-    </div>
+    <form class="row" id="fClave">
+      <label class="f" style="flex:2 1 260px">Clave del equipo
+        <input id="clave" type="password" autocomplete="current-password" placeholder="Clave para ver los datos"></label>
+      <button class="btn primary" id="btnCargar" type="submit">Cargar datos</button>
+    </form>
+    <details class="small muted"><summary>Dirección de la planilla</summary>
+      <p>Viene configurada. Cambiala solo si la planilla tiene una dirección nueva.</p>
+      <input id="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false" style="width:100%;padding:8px;border:1.5px solid var(--line);border-radius:8px">
+    </details>
     <p class="msg" id="msgDatos" hidden></p>
   </section>
 
@@ -95,25 +99,43 @@ const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/
 const grupoCultivo = c => norm(c).startsWith("giras") ? "Girasol" : (norm(c).startsWith("maiz") ? "Maíz" : (c||"Sin cultivo"));
 let EV=[], SU={}, plantilla=null;
 
-// dirección recordada (la app guarda la suya en este mismo sitio)
-try{ const a = JSON.parse(localStorage.getItem("implantacion.v1")||"{}"); $("#url").value = localStorage.getItem("informe.url") || (a.cfg&&a.cfg.url) || ""; }catch(e){}
 
-$("#btnCargar").onclick = async () => {
-  const url = $("#url").value.trim(); const m=$("#msgDatos");
-  try{ localStorage.setItem("informe.url", url); }catch(e){}
+/* ---------- conexión con la planilla (con clave del equipo) ---------- */
+const DIRECCION = "https://script.google.com/macros/s/AKfycbxgueuu9H07QCoBAr4dhBw9S3sReTt93dgXvwOL8NonnBSkwwyX9soNM2yjqthS1iDO/exec";   // dirección /exec de la planilla central
+const direccion = () => { try{ return localStorage.getItem("implantacion.datosUrl") || DIRECCION; }catch(e){ return DIRECCION; } };
+const claveGuardada = () => { try{ return localStorage.getItem("implantacion.clave") || ""; }catch(e){ return ""; } };
+function guardarClave(c){ try{ c ? localStorage.setItem("implantacion.clave", c) : localStorage.removeItem("implantacion.clave"); }catch(e){} }
+async function pedirDatos(clave){
+  const r = await fetch(direccion(), { method:"POST", body: JSON.stringify({ accion:"datos", clave }) });
+  let j; try{ j = await r.json(); }catch(e){ throw new Error("red"); }
+  if(!j.ok){ const err = new Error(j.error || "error"); throw err; }
+  return j;
+}
+function mensajeError(e){
+  return e.message==="clave" ? "La clave no es correcta." :
+         e.message==="sin-clave" ? "La planilla todavía no tiene una clave configurada (hay que cargarla en el código de Apps Script)." :
+         "No se pudo conectar con la planilla. Revisá la conexión a internet; si sigue, revisá la dirección en “Dirección de la planilla”.";
+}
+$("#url").value = direccion(); $("#clave").value = claveGuardada();
+$("#url").addEventListener("change", e => { const v=e.target.value.trim(); try{ (v && v!==DIRECCION) ? localStorage.setItem("implantacion.datosUrl", v) : localStorage.removeItem("implantacion.datosUrl"); }catch(x){} });
+
+$("#fClave").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const clave = $("#clave").value.trim(); const m=$("#msgDatos");
   m.hidden=false; m.className="msg"; m.textContent="Cargando…";
   try{
-    const r = await fetch(url + (url.includes("?")?"&":"?") + "accion=datos"); const j = await r.json();
-    if(!j.ok || !Array.isArray(j.evaluaciones)) throw new Error("respuesta inesperada");
+    const j = await pedirDatos(clave); guardarClave(clave);
     EV = j.evaluaciones.filter(e=>e.ID_Evaluacion);
     SU = {}; for(const s of j.surcos||[]){ (SU[s.ID_Evaluacion] = SU[s.ID_Evaluacion]||[]).push(s); }
     for(const k in SU) SU[k].sort((a,b)=>(+a.Surco)-(+b.Surco));
     m.className="msg ok"; m.textContent = `✓ ${EV.length} evaluaciones cargadas.`;
     llenarFiltros(); $("#s2").hidden=false; $("#s3").hidden=false;
   }catch(e){
-    m.className="msg bad"; m.textContent = "No se pudieron leer los datos. Revisá la dirección y que la planilla tenga la versión nueva del código (con ?accion=datos).";
+    if(e.message==="clave") guardarClave("");
+    m.className="msg bad"; m.textContent = mensajeError(e);
   }
-};
+});
+if(claveGuardada()) $("#fClave").requestSubmit();
 function opciones(sel, vals, keep){ const prev = keep ? sel.value : null; sel.innerHTML = vals.map(v=>`<option>${esc(v)}</option>`).join(""); if(prev && vals.includes(prev)) sel.value=prev; }
 function llenarFiltros(){
   opciones($("#fEmp"), [...new Set(EV.map(e=>String(e.Empresa||"Sin empresa")))].sort(), true);
