@@ -85,6 +85,7 @@ table.sem{border-collapse:collapse;width:100%;font-size:14px}
 .sem .nm{font-weight:700}.sem .nm small{display:block;font-weight:500;color:var(--muted);font-size:12px}
 .sem .val{font-family:var(--display);font-size:22px;font-weight:700;margin-right:6px}
 .semuna{font-size:13.5px;color:var(--ink-2)}
+.defs{font-size:12.5px;color:var(--ink-2);margin:-4px 0 0;max-width:110ch}
 .kpi{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .kpi .l{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .kpi .v{font-family:var(--display);font-size:40px;font-weight:700;line-height:1}
@@ -226,7 +227,7 @@ table.sur{border-collapse:collapse;width:100%;font-size:12.5px}
         <tr><td></td><td>Muy buena</td><td>Buena</td><td>Regular</td></tr>
         <tr><td>CV ≤ (%)</td><td><input id="c_cv0"></td><td><input id="c_cv1"></td><td><input id="c_cv2"></td></tr>
         <tr><td>Logro ≥ (%)</td><td><input id="c_lo0"></td><td><input id="c_lo1"></td><td><input id="c_lo2"></td></tr>
-        <tr><td>Unif. ≥ (%)</td><td><input id="c_un0"></td><td><input id="c_un1"></td><td><input id="c_un2"></td></tr>
+        <tr><td>Singulación ≥ (%)</td><td><input id="c_un0"></td><td><input id="c_un1"></td><td><input id="c_un2"></td></tr>
       </table>
       <p>Por debajo del último valor: Deficiente. Se guardan en esta computadora y salen en el informe.</p>
     </details>
@@ -531,7 +532,7 @@ function porSembradora(rows){
   grupos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const cel = (v, r) => `<span class="val">${fp(v)}</span>${chip(r)}`;
   return `<div><div class="sec-h" style="margin:4px 0 6px"><h3 style="font-size:19px">Por sembradora</h3><p>Promedio de los lotes y ambientes sembrados con cada máquina</p></div>
-    <div class="tw"><table class="sem"><thead><tr><th>Sembradora</th><th class="n">Lotes / amb.</th><th>Logro</th><th>Coef. de variación</th><th>Uniformidad</th><th class="n">Dobles</th><th class="n">Fallas</th></tr></thead><tbody>
+    <div class="tw"><table class="sem"><thead><tr><th>Sembradora</th><th class="n">Lotes / amb.</th><th>Logro</th><th>Coef. de variación</th><th>Singulación</th><th class="n">Dobles</th><th class="n">Fallas</th></tr></thead><tbody>
     ${grupos.map(G=>{ const rs=G.rs, lo=mean(rs.map(R=>R.logro)), cv=mean(rs.map(R=>R.cv)), un=mean(rs.map(R=>R.unif));
       const contr = [...new Set(rs.map(R=>String(R.e.Contratista||"").trim()).filter(Boolean))];
       return `<tr><td class="nm">${esc(G.nombre)}${contr.length?`<small>${esc(contr.join(", "))}</small>`:""}</td><td class="n">${rs.length}</td>
@@ -585,8 +586,9 @@ function render(){
     <div class="kpis">
       <div class="kpi"><span class="l">Logro</span><span class="v">${fp(K.logro)}</span><span class="d">${chip(rLo)}</span></div>
       <div class="kpi"><span class="l">Coef. de variación</span><span class="v">${fp(K.cv)}</span><span class="d">${chip(rCV)} · DP ${f1(K.media)} ± ${f1(K.desv)} cm</span></div>
-      <div class="kpi"><span class="l">Uniformidad</span><span class="v">${fp(K.unif)}</span><span class="d">${chip(rUn)} · dobles ${fp(K.dob,0)} · fallas ${fp(K.fal,0)}</span></div>
+      <div class="kpi"><span class="l">Singulación</span><span class="v">${fp(K.unif)}</span><span class="d">${chip(rUn)} · dobles ${fp(K.dob,0)} · fallas ${fp(K.fal,0)}</span></div>
     </div>
+    <p class="defs"><b>Singulación:</b> porcentaje de distancias entre plantas que no son ni dobles ni fallas, es decir, lugares donde quedó una sola planta, a una distancia razonable de la anterior. <b>Dobles:</b> dos plantas a 3 cm o menos. <b>Fallas:</b> distancia mayor al doble de la teórica (falta al menos una planta). Singulación = 100% − dobles − fallas.</p>
     ${porSembradora(rows)}
     <div class="comment ${com?"":"vacio"}"><label class="fld noprint" for="com">Comentarios del asesor (salen en el PDF)</label>
       <textarea id="com" placeholder="Conclusiones y recomendaciones para la empresa…">${esc(com)}</textarea>
@@ -602,7 +604,7 @@ function render(){
     <div class="sec-h"><h3>Resumen por lote y ambiente</h3>
       <div class="legend"><span><i style="background:var(--brand)"></i>Logradas</span><span><i style="background:var(--ink);width:3px"></i>Densidad de siembra</span><span><i style="background:var(--dob)"></i>Dobles</span><span><i style="background:var(--acep)"></i>Aceptables</span><span><i style="background:var(--fal)"></i>Fallas</span></div></div>
     <div class="tw"><table class="ov">
-      <thead><tr><th class="n">N°</th><th>Lote · ambiente</th><th>Fecha</th><th>EF</th><th>Híbrido</th><th class="n">Siembra</th><th>Logradas (pl/ha)</th><th class="n">Logro</th><th>CV</th><th>Distancias</th><th class="n">Unif.</th></tr></thead>
+      <thead><tr><th class="n">N°</th><th>Lote · ambiente</th><th>Fecha</th><th>EF</th><th>Híbrido</th><th class="n">Siembra</th><th>Logradas (pl/ha)</th><th class="n">Logro</th><th>CV</th><th>Distancias</th><th class="n">Singul.</th></tr></thead>
       <tbody>${rows.map((R,i)=>`<tr class="row" data-go="${R.id}">
         <td class="n" style="color:var(--muted);font-weight:700">${i+1}</td><td class="lt">${esc(nice(R.e.Lote))} · ${esc(R.e.Ambiente||"lote")}<small>${esc(nice(R.e.Campo))}</small></td>
         <td>${fd(R.e.Fecha)}</td><td>${esc(R.e.Estado_fenologico||"")}</td><td>${esc(R.e.Genetica||"—")}</td>
@@ -614,7 +616,7 @@ function render(){
         <td class="n">${chip(rateHigh(R.unif,CRIT.un)).replace(/<\/i>.*<\/span>/, `</i>${fp(R.unif,0)}</span>`)}</td></tr>`).join("")}</tbody>
       <tfoot><tr><td></td><td>Promedio</td><td></td><td></td><td></td><td class="n"></td><td></td><td class="n">${fp(K.logro)}</td><td>${fp(K.cv,0)}</td><td>${fp(K.dob,0)} · ${fp(K.unif,0)} · ${fp(K.fal,0)}</td><td class="n">${fp(K.unif,0)}</td></tr></tfoot>
     </table></div>
-    <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Calificación orientativa — CV: muy buena ≤ ${CRIT.cv[0]}%, buena ≤ ${CRIT.cv[1]}%, regular ≤ ${CRIT.cv[2]}%. Logro: muy bueno ≥ ${CRIT.lo[0]}%, bueno ≥ ${CRIT.lo[1]}%, regular ≥ ${CRIT.lo[2]}%. Uniformidad (distancias aceptables): ≥ ${CRIT.un[0]}% / ${CRIT.un[1]}% / ${CRIT.un[2]}%. Doble: plantas a 3 cm o menos; falla: distancia mayor al doble de la teórica.</p>
+    <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Calificación orientativa — CV: muy buena ≤ ${CRIT.cv[0]}%, buena ≤ ${CRIT.cv[1]}%, regular ≤ ${CRIT.cv[2]}%. Logro: muy bueno ≥ ${CRIT.lo[0]}%, bueno ≥ ${CRIT.lo[1]}%, regular ≥ ${CRIT.lo[2]}%. Singulación (distancias que no son dobles ni fallas): ≥ ${CRIT.un[0]}% / ${CRIT.un[1]}% / ${CRIT.un[2]}%. Doble: plantas a 3 cm o menos; falla: distancia mayor al doble de la teórica.</p>
   </section>
 
   </section></div>`;
@@ -629,7 +631,7 @@ function render(){
     return `<article class="lote" id="${R.id}">
       <div class="h"><div><h4>${esc(nice(e.Lote))}<small>${esc(e.Ambiente?"ambiente "+e.Ambiente:"lote completo")}</small></h4>
         <div class="meta">${esc(nice(e.Campo))} · ${fd(e.Fecha)}${e.Estado_fenologico?" · "+esc(e.Estado_fenologico):""} · ${R.nOk} de ${R.ss.length} surcos completos</div></div>
-        <div class="chips">${chip(rl,"Logro")}${chip(rc,"CV")}${chip(ru,"Unif.")}</div></div>
+        <div class="chips">${chip(rl,"Logro")}${chip(rc,"CV")}${chip(ru,"Singul.")}</div></div>
       <div class="lgrid">
         <dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==="GPS"?v:esc(v)}</dd>`).join("")}</dl>
         <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
@@ -639,7 +641,7 @@ function render(){
             <div><div class="l">CV</div><div class="v">${fp(R.cv)}</div></div>
             <div><div class="l">Dist. media</div><div class="v">${f1(R.media)}<small>± ${f1(R.desv)} cm</small></div></div>
             <div><div class="l">Dobles / fallas</div><div class="v">${fp(R.dob,0)}<small>/</small> ${fp(R.fal,0)}</div></div>
-            <div><div class="l">Uniformidad</div><div class="v">${fp(R.unif)}</div></div>
+            <div><div class="l">Singulación</div><div class="v">${fp(R.unif)}</div></div>
           </div>
           <div class="fig"><div class="t">Plantas sobre la cinta, por surco · marcas grises: posición ideal según la densidad</div>${cinta(R)}</div>
         </div>
