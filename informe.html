@@ -99,6 +99,52 @@ const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/
 const grupoCultivo = c => norm(c).startsWith("giras") ? "Girasol" : (norm(c).startsWith("maiz") ? "Maíz" : (c||"Sin cultivo"));
 let EV=[], SU={}, plantilla=null;
 
+/* ---------- unir recuentos del mismo lote ----------
+   Cuando dos o más personas cuentan surcos del mismo lote y ambiente (misma empresa, campaña y cultivo)
+   con pocos días de diferencia, se juntan en una sola evaluación con todos los surcos. */
+const DIAS_UNIR = 3;
+function unirRecuentos(evs, surcos){
+  const nrm = s => String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();
+  const grp = c => { const x=nrm(c); return x.startsWith("giras")?"girasol":x.startsWith("maiz")?"maiz":x; };
+  const dia = f => { const m=String(f||"").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Date.UTC(+m[1],+m[2]-1,+m[3])/864e5 : null; };
+  const por = {}; for(const s of surcos){ (por[s.ID_Evaluacion] = por[s.ID_Evaluacion] || []).push(s); }
+  const claves = {};
+  evs.filter(e=>e.ID_Evaluacion).forEach(e=>{
+    const k = [nrm(e.Empresa), nrm(e.Campania), grp(e.Cultivo), nrm(e.Campo), nrm(e.Lote), nrm(e.Ambiente)].join("|");
+    (claves[k] = claves[k] || []).push(e);
+  });
+  const outE = [], outS = [];
+  for(const lista of Object.values(claves)){
+    lista.sort((a,b)=>String(a.Fecha).localeCompare(String(b.Fecha)));
+    const grupos = [];
+    for(const e of lista){
+      const g = grupos[grupos.length-1], d = dia(e.Fecha);
+      if(g && d!=null && g.d0!=null && d - g.d0 <= DIAS_UNIR) g.evs.push(e); else grupos.push({ d0:d, evs:[e] });
+    }
+    for(const g of grupos){
+      const base = g.evs[0], m = Object.assign({}, base);
+      const uniq = k => [...new Set(g.evs.map(e=>String(e[k]??"").trim()).filter(Boolean))];
+      m._fuentes = g.evs.map(e=>e.ID_Evaluacion); m._nRec = g.evs.length;
+      if(g.evs.length > 1){
+        ["Tecnico","Contratista","Sembradora","Genetica","Estado_fenologico","Antecesor"].forEach(k=>{ m[k] = uniq(k).join(" / "); });
+        const obs = g.evs.filter(e=>String(e.Observaciones||"").trim()).map(e=> (e.Tecnico?String(e.Tecnico).trim()+": ":"") + String(e.Observaciones).trim());
+        m.Observaciones = obs.join(" · ");
+        const dens = uniq("Densidad_siembra"), esp = uniq("Espaciamiento_cm");
+        m._datosDistintos = dens.length>1 || esp.length>1;
+      }
+      outE.push(m);
+      let n = 0;
+      for(const e of g.evs){
+        (por[e.ID_Evaluacion]||[]).slice().sort((a,b)=>(+a.Surco)-(+b.Surco)).forEach(s=>{
+          n++; outS.push(Object.assign({}, s, { ID_Evaluacion: m.ID_Evaluacion, Surco: n, _tec: String(e.Tecnico||"").trim(), _esp: e.Espaciamiento_cm, _dens: e.Densidad_siembra }));
+        });
+      }
+    }
+  }
+  return { evaluaciones: outE, surcos: outS };
+}
+
+
 
 /* ---------- conexión con la planilla (con clave del equipo) ---------- */
 const DIRECCION = "https://script.google.com/macros/s/AKfycbxgueuu9H07QCoBAr4dhBw9S3sReTt93dgXvwOL8NonnBSkwwyX9soNM2yjqthS1iDO/exec";   // dirección /exec de la planilla central
@@ -125,10 +171,12 @@ $("#fClave").addEventListener("submit", async ev => {
   m.hidden=false; m.className="msg"; m.textContent="Cargando…";
   try{
     const j = await pedirDatos(clave); guardarClave(clave);
-    EV = j.evaluaciones.filter(e=>e.ID_Evaluacion);
-    SU = {}; for(const s of j.surcos||[]){ (SU[s.ID_Evaluacion] = SU[s.ID_Evaluacion]||[]).push(s); }
+    const u = unirRecuentos(j.evaluaciones, j.surcos||[]);
+    EV = u.evaluaciones.filter(e=>e.ID_Evaluacion);
+    SU = {}; for(const s of u.surcos){ (SU[s.ID_Evaluacion] = SU[s.ID_Evaluacion]||[]).push(s); }
     for(const k in SU) SU[k].sort((a,b)=>(+a.Surco)-(+b.Surco));
-    m.className="msg ok"; m.textContent = `✓ ${EV.length} evaluaciones cargadas.`;
+    const unidas = EV.filter(e=>e._nRec>1).length;
+    m.className="msg ok"; m.textContent = `✓ ${EV.length} evaluaciones cargadas.` + (unidas ? ` ${unidas} ${unidas===1?"junta":"juntan"} recuentos de varias personas en el mismo lote.` : "");
     llenarFiltros(); $("#s2").hidden=false; $("#s3").hidden=false;
   }catch(e){
     if(e.message==="clave") guardarClave("");
@@ -168,7 +216,7 @@ function tabla(){
     const on = !off.has(e.ID_Evaluacion);
     if(on && k % POR_ARCHIVO === 0) h += `<tr class="parte"><td colspan="10">Archivo ${Math.floor(k/POR_ARCHIVO)+1}</td></tr>`;
     const ns = (SU[e.ID_Evaluacion]||[]).length;
-    h += `<tr class="${on?"":"off"}"><td><input type="checkbox" data-id="${esc(e.ID_Evaluacion)}" ${on?"checked":""} aria-label="Incluir"></td><td>${on?"L"+((k%POR_ARCHIVO)+1):"—"}</td><td>${fd(e.Fecha)}</td><td>${esc(e.Campo)}</td><td>${esc(e.Lote)}</td><td>${esc(e.Ambiente)||"Lote completo"}</td><td>${esc(e.Cultivo)}</td><td class="n">${ns}${ns>MAX_SURCOS?" ⚠":""}</td><td class="n">${f0(e.Plantas_ha)}</td><td class="n">${fp(e.CV)}</td></tr>`;
+    h += `<tr class="${on?"":"off"}"><td><input type="checkbox" data-id="${esc(e.ID_Evaluacion)}" ${on?"checked":""} aria-label="Incluir"></td><td>${on?"L"+((k%POR_ARCHIVO)+1):"—"}</td><td>${fd(e.Fecha)}</td><td>${esc(e.Campo)}</td><td>${esc(e.Lote)}</td><td>${esc(e.Ambiente)||"Lote completo"}</td><td>${esc(e.Cultivo)}</td><td class="n">${ns}${ns>MAX_SURCOS?" ⚠":""}${e._nRec>1?` <span title="Une ${e._nRec} recuentos" style="color:var(--muted)">(${e._nRec} rec.)</span>`:""}</td><td class="n">${f0(e.Plantas_ha)}</td><td class="n">${fp(e.CV)}</td></tr>`;
     if(on) k++;
   });
   $("#tbl").innerHTML = h + "</tbody>";

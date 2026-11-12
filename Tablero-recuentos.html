@@ -15,8 +15,8 @@
   --bg:#F4F5F1; --surface:#FFFFFF; --ink:#18200F; --ink-2:#4B5541; --muted:#7A8470; --line:#DCE0D3; --line-2:#ECEEE7;
   --brand:#4E9A1C; --brand-ink:#FFFFFF; --brand-dark:#336B10; --brand-tint:#EDF5E5;
   --dob:#2A78D6; --fal:#E34948; --acep:#D9DCD2;           /* dobles ↔ fallas: par divergente con centro neutro */
-  --r0:#0CA30C; --r1:#7DBB2F; --r2:#E2A000; --r3:#D03B3B;  /* calificación: siempre con texto */
-  --r0-bg:#E2F4E0; --r1-bg:#EEF6E2; --r2-bg:#FDF2D5; --r3-bg:#FBE3E2;
+  --r0:#0B7A2B; --r1:#2FA344; --r2:#9BC53D; --r3:#E2A000; --r4:#D03B3B;  /* calificación: siempre con texto */
+  --r0-bg:#D7EEDC; --r1-bg:#E2F4E0; --r2-bg:#F0F7E1; --r3-bg:#FDF2D5; --r4-bg:#FBE3E2;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   color-scheme:light;
@@ -66,7 +66,7 @@ main{padding:24px 28px 80px;min-width:0;display:flex;flex-direction:column;gap:2
 .conn .fld{flex:1 1 380px}
 .btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;min-height:40px}
 .msg{font-size:14px;font-weight:600;margin-top:10px}
-.msg.bad{color:var(--r3)}
+.msg.bad{color:var(--r4)}
 
 /* encabezado de empresa */
 .ehead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
@@ -97,6 +97,9 @@ table.sem{border-collapse:collapse;width:100%;font-size:14px}
 .chip.r1{background:var(--r1-bg)} .chip.r1 i{background:var(--r1)}
 .chip.r2{background:var(--r2-bg)} .chip.r2 i{background:var(--r2)}
 .chip.r3{background:var(--r3-bg)} .chip.r3 i{background:var(--r3)}
+.chip.r4{background:var(--r4-bg)} .chip.r4 i{background:var(--r4)}
+.crit th{font-weight:700;text-align:left;padding:3px 2px;color:var(--muted);font-size:11px}
+.crit td.k{font-weight:700}
 
 .sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .sec-h h3{font-size:22px}
@@ -221,15 +224,17 @@ table.sur{border-collapse:collapse;width:100%;font-size:12.5px}
     <label class="fld">Campaña<select id="fCamp"></select></label>
     <label class="fld">Cultivo<select id="fCult"></select></label>
     <label class="fld">Campo<select id="fCampo"></select></label>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="cUnir" style="margin-top:3px">
+      <span>Unir recuentos del mismo lote y ambiente hechos con hasta 3 días de diferencia (por ejemplo, dos personas con dos celulares)</span></label>
     <details class="crit">
       <summary>Criterios de calificación</summary>
+      <div id="critTabla"></div>
+      <p style="margin:10px 0 4px;font-weight:700">Singulación (orientativo, editable)</p>
       <table>
         <tr><td></td><td>Muy buena</td><td>Buena</td><td>Regular</td></tr>
-        <tr><td>CV ≤ (%)</td><td><input id="c_cv0"></td><td><input id="c_cv1"></td><td><input id="c_cv2"></td></tr>
-        <tr><td>Logro ≥ (%)</td><td><input id="c_lo0"></td><td><input id="c_lo1"></td><td><input id="c_lo2"></td></tr>
-        <tr><td>Singulación ≥ (%)</td><td><input id="c_un0"></td><td><input id="c_un1"></td><td><input id="c_un2"></td></tr>
+        <tr><td>≥ (%)</td><td><input id="c_un0"></td><td><input id="c_un1"></td><td><input id="c_un2"></td></tr>
       </table>
-      <p>Por debajo del último valor: Deficiente. Se guardan en esta computadora y salen en el informe.</p>
+      <p>Por debajo del último valor: deficiente. Se guarda en esta computadora.</p>
     </details>
     <details class="crit"><summary>Dirección de la planilla</summary>
       <p>Viene configurada. Cambiala solo si la planilla tiene una dirección nueva.</p>
@@ -268,15 +273,30 @@ const DOBLE_CM = 3, FALLA_X = 2;   // Doble: ≤ 3 cm. Falla: más del doble de 
 const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
 
 /* ---------- criterios (orientativos, editables) ---------- */
-const CRIT0 = { cv:[20,30,40], lo:[95,90,85], un:[90,80,70] };
-let CRIT = Object.assign({}, CRIT0, store.get("tablero.crit", {}));
-const RNOM = ["Muy buena","Buena","Regular","Deficiente"];
-const rateLow  = (v, th) => v==null ? null : (v*100 <= th[0] ? 0 : v*100 <= th[1] ? 1 : v*100 <= th[2] ? 2 : 3);
-const rateHigh = (v, th) => v==null ? null : (v*100 >= th[0] ? 0 : v*100 >= th[1] ? 1 : v*100 >= th[2] ? 2 : 3);
-const chip = (r, pre) => r==null ? "" : `<span class="chip r${r}"><i></i>${pre?pre+" ":""}${RNOM[r].toLowerCase()}</span>`;
+/* Logro y CV: criterios fijos por cultivo, definidos por el equipo. Singulación: orientativo y editable. */
+const CRITERIOS = {
+  "Maíz":    { logro:[95,90,85,80], cv:[20,25,30,40] },
+  "Girasol": { logro:[95,90,80,70], cv:[20,25,35,40] }
+};
+const NIV = ["Excelente","Muy bueno","Bueno","Regular","Deficiente"];
+const critDe = c => CRITERIOS[c==="Girasol" ? "Girasol" : "Maíz"];
+// Logro: > t0 excelente · ≥ t1 muy bueno · ≥ t2 bueno · ≥ t3 regular · menos, deficiente
+const rateLogro = (v,c) => { if(v==null) return null; const t=critDe(c).logro, x=v*100; return x>t[0]?0 : x>=t[1]?1 : x>=t[2]?2 : x>=t[3]?3 : 4; };
+// CV: < t0 excelente · ≤ t1 muy bueno · ≤ t2 bueno · ≤ t3 regular · más, deficiente
+const rateCV = (v,c) => { if(v==null) return null; const t=critDe(c).cv, x=v*100; return x<t[0]?0 : x<=t[1]?1 : x<=t[2]?2 : x<=t[3]?3 : 4; };
+let CRIT = { un: store.get("tablero.critUn", [90,80,70]) };
+const NIVU = ["Muy buena","Buena","Regular","Deficiente"];
+const rateUn = v => v==null ? null : (v*100>=CRIT.un[0]?1 : v*100>=CRIT.un[1]?2 : v*100>=CRIT.un[2]?3 : 4);
+const nomNivel = (r, tipo) => tipo==="un" ? NIVU[r-1] : NIV[r];
+const chip = (r, pre, tipo) => r==null ? "" : `<span class="chip r${r}"><i></i>${pre?pre+" ":""}${nomNivel(r,tipo).toLowerCase()}</span>`;
+function critTexto(c){ const k=critDe(c);
+  return `Logro: excelente &gt; ${k.logro[0]}%, muy bueno ${k.logro[1]}–${k.logro[0]}%, bueno ${k.logro[2]}–${k.logro[1]}%, regular ${k.logro[3]}–${k.logro[2]}%, deficiente &lt; ${k.logro[3]}%. CV: excelente &lt; ${k.cv[0]}%, muy bueno ${k.cv[0]}–${k.cv[1]}%, bueno ${k.cv[1]}–${k.cv[2]}%, regular ${k.cv[2]}–${k.cv[3]}%, deficiente &gt; ${k.cv[3]}%.`; }
 function critUI(){
-  [["cv","cv"],["lo","lo"],["un","un"]].forEach(([k,id])=>[0,1,2].forEach(i=>{ const el=$(`#c_${id}${i}`); el.value=CRIT[k][i];
-    el.onchange=()=>{ const v=parseFloat(el.value.replace(",",".")); if(isFinite(v)){ CRIT[k]=CRIT[k].slice(); CRIT[k][i]=v; store.set("tablero.crit",CRIT); render(); } }; }));
+  [0,1,2].forEach(i=>{ const el=$(`#c_un${i}`); el.value=CRIT.un[i];
+    el.onchange=()=>{ const v=parseFloat(el.value.replace(",",".")); if(isFinite(v)){ CRIT.un=CRIT.un.slice(); CRIT.un[i]=v; store.set("tablero.critUn",CRIT.un); render(); } }; });
+  $("#critTabla").innerHTML = Object.entries(CRITERIOS).map(([c,k])=>`<table><tr><th colspan="2">${c}</th></tr>
+    <tr><td class="k">Logro</td><td>&gt;${k.logro[0]} exc · ${k.logro[1]}–${k.logro[0]} MB · ${k.logro[2]}–${k.logro[1]} B · ${k.logro[3]}–${k.logro[2]} R · &lt;${k.logro[3]} D</td></tr>
+    <tr><td class="k">CV</td><td>&lt;${k.cv[0]} exc · ${k.cv[0]}–${k.cv[1]} MB · ${k.cv[1]}–${k.cv[2]} B · ${k.cv[2]}–${k.cv[3]} R · &gt;${k.cv[3]} D</td></tr></table>`).join("");
 }
 
 /* ---------- formato ---------- */
@@ -303,19 +323,70 @@ function calcSurco(vals, esp, dens){
   }
   return r;
 }
+
+/* ---------- unir recuentos del mismo lote ----------
+   Cuando dos o más personas cuentan surcos del mismo lote y ambiente (misma empresa, campaña y cultivo)
+   con pocos días de diferencia, se juntan en una sola evaluación con todos los surcos. */
+const DIAS_UNIR = 3;
+function unirRecuentos(evs, surcos){
+  const nrm = s => String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();
+  const grp = c => { const x=nrm(c); return x.startsWith("giras")?"girasol":x.startsWith("maiz")?"maiz":x; };
+  const dia = f => { const m=String(f||"").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Date.UTC(+m[1],+m[2]-1,+m[3])/864e5 : null; };
+  const por = {}; for(const s of surcos){ (por[s.ID_Evaluacion] = por[s.ID_Evaluacion] || []).push(s); }
+  const claves = {};
+  evs.filter(e=>e.ID_Evaluacion).forEach(e=>{
+    const k = [nrm(e.Empresa), nrm(e.Campania), grp(e.Cultivo), nrm(e.Campo), nrm(e.Lote), nrm(e.Ambiente)].join("|");
+    (claves[k] = claves[k] || []).push(e);
+  });
+  const outE = [], outS = [];
+  for(const lista of Object.values(claves)){
+    lista.sort((a,b)=>String(a.Fecha).localeCompare(String(b.Fecha)));
+    const grupos = [];
+    for(const e of lista){
+      const g = grupos[grupos.length-1], d = dia(e.Fecha);
+      if(g && d!=null && g.d0!=null && d - g.d0 <= DIAS_UNIR) g.evs.push(e); else grupos.push({ d0:d, evs:[e] });
+    }
+    for(const g of grupos){
+      const base = g.evs[0], m = Object.assign({}, base);
+      const uniq = k => [...new Set(g.evs.map(e=>String(e[k]??"").trim()).filter(Boolean))];
+      m._fuentes = g.evs.map(e=>e.ID_Evaluacion); m._nRec = g.evs.length;
+      if(g.evs.length > 1){
+        ["Tecnico","Contratista","Sembradora","Genetica","Estado_fenologico","Antecesor"].forEach(k=>{ m[k] = uniq(k).join(" / "); });
+        const obs = g.evs.filter(e=>String(e.Observaciones||"").trim()).map(e=> (e.Tecnico?String(e.Tecnico).trim()+": ":"") + String(e.Observaciones).trim());
+        m.Observaciones = obs.join(" · ");
+        const dens = uniq("Densidad_siembra"), esp = uniq("Espaciamiento_cm");
+        m._datosDistintos = dens.length>1 || esp.length>1;
+      }
+      outE.push(m);
+      let n = 0;
+      for(const e of g.evs){
+        (por[e.ID_Evaluacion]||[]).slice().sort((a,b)=>(+a.Surco)-(+b.Surco)).forEach(s=>{
+          n++; outS.push(Object.assign({}, s, { ID_Evaluacion: m.ID_Evaluacion, Surco: n, _tec: String(e.Tecnico||"").trim(), _esp: e.Espaciamiento_cm, _dens: e.Densidad_siembra }));
+        });
+      }
+    }
+  }
+  return { evaluaciones: outE, surcos: outS };
+}
+
 function armar(evs, surcos){
+  if(store.get("tablero.unir", true)){ const u = unirRecuentos(evs, surcos); evs = u.evaluaciones; surcos = u.surcos; }
   const por = {}; for(const s of surcos){ (por[s.ID_Evaluacion] = por[s.ID_Evaluacion] || []).push(s); }
   return evs.filter(e=>e.ID_Evaluacion).map(e=>{
     const esp = numv(e.Espaciamiento_cm), dens = numv(e.Densidad_siembra);
     const ss = (por[e.ID_Evaluacion]||[]).sort((a,b)=>(+a.Surco)-(+b.Surco)).map(s=>{
       const vals=[]; for(let k=1;k<=N_DIST;k++){ const v=numv(s["D"+String(k).padStart(2,"0")]); if(v!=null) vals.push(v); }
-      return Object.assign(calcSurco(vals, esp, dens), { surco:+s.Surco });
+      const e2 = numv(s._esp) ?? esp, d2 = numv(s._dens) ?? dens;
+      const c = Object.assign(calcSurco(vals, e2, d2), { surco:+s.Surco, tec: s._tec||"" });
+      c.logro = c.plha!=null && d2>0 ? c.plha/d2 : null;
+      return c;
     });
     const ok = ss.filter(s=>s.ok);
     const avg = k => { const a = ok.map(s=>s[k]).filter(x=>x!=null); return a.length ? a.reduce((p,x)=>p+x,0)/a.length : null; };
     const R = { e, esp, dens, ss, nOk: ok.length, teo: esp>0&&dens>0 ? 1e8/(dens*esp) : null,
-      plha:avg("plha"), media:avg("media"), desv:avg("desv"), cv:avg("cv"), dob:avg("dob"), fal:avg("fal"), unif:avg("unif") };
-    R.logro = R.plha!=null && dens>0 ? R.plha/dens : null;
+      plha:avg("plha"), media:avg("media"), desv:avg("desv"), cv:avg("cv"), dob:avg("dob"), fal:avg("fal"), unif:avg("unif"),
+      nRec: e._nRec || 1, distintos: !!e._datosDistintos };
+    R.logro = avg("logro");
     R.empresa = String(e.Empresa||"Sin empresa"); R.camp = String(e.Campania||""); R.cult = grupo(e.Cultivo);
     R.id = "l-" + String(e.ID_Evaluacion).replace(/[^\w-]/g,"");
     return R;
@@ -403,10 +474,10 @@ function barLograda(R, max){   // barra de plantas logradas con marca de densida
     ${R.dens?`<rect x="${x(R.dens)-1}" y="0" width="2.5" height="${H}" rx="1" fill="var(--ink)"/>`:""}</svg>`;
 }
 function barCV(R, max){
-  const W=80, H=18, r = rateLow(R.cv, CRIT.cv), col = r==null?"var(--muted)":`var(--r${r})`;
+  const W=80, H=18, r = rateCV(R.cv, R.cult), col = r==null?"var(--muted)":`var(--r${r})`;
   const w = R.cv==null?0:Math.min(W, R.cv/max*W);
-  const ticks = CRIT.cv.map(t=>`<rect x="${t/100/max*W}" y="2" width="1" height="${H-4}" fill="var(--muted)" opacity=".5"/>`).join("");
-  return `<svg class="bar" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" data-tip="CV ${fp(R.cv)} · ${r==null?"":RNOM[r]}"><rect x="0" y="4" width="${W}" height="10" rx="3" fill="var(--line-2)"/><rect x="0" y="4" width="${w}" height="10" rx="3" fill="${col}"/>${ticks}</svg>`;
+  const ticks = critDe(R.cult).cv.map(t=>`<rect x="${t/100/max*W}" y="2" width="1" height="${H-4}" fill="var(--muted)" opacity=".5"/>`).join("");
+  return `<svg class="bar" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" data-tip="CV ${fp(R.cv)} · ${r==null?"":NIV[r]}"><rect x="0" y="4" width="${W}" height="10" rx="3" fill="var(--line-2)"/><rect x="0" y="4" width="${w}" height="10" rx="3" fill="${col}"/>${ticks}</svg>`;
 }
 function barDist(R){   // dobles | aceptables | fallas, 100%
   const W=100, H=18; if(R.dob==null) return "—";
@@ -422,26 +493,27 @@ function scatter(rows){   // logro vs CV: arriba a la izquierda = buena implanta
   const W=520, H=300, m={l:46,r:16,t:16,b:40};
   const pts = rows.filter(R=>R.cv!=null && R.logro!=null);
   if(!pts.length) return `<p class="muted">Sin datos completos.</p>`;
-  const xmax = Math.max(CRIT.cv[2]/100*1.25, ...pts.map(R=>R.cv))*1.05;
-  const ylo = Math.min(CRIT.lo[2]/100-0.05, ...pts.map(R=>R.logro)) - 0.02, yhi = Math.max(1.02, ...pts.map(R=>R.logro)) + 0.01;
+  const k = critDe(pts[0].cult), tC = k.cv[2], tL = k.logro[2];   // zona "bueno o mejor"
+  const xmax = Math.max(k.cv[3]/100*1.15, ...pts.map(R=>R.cv))*1.05;
+  const ylo = Math.min(k.logro[3]/100-0.05, ...pts.map(R=>R.logro)) - 0.02, yhi = Math.max(1.02, ...pts.map(R=>R.logro)) + 0.01;
   const X = v => m.l + v/xmax*(W-m.l-m.r), Y = v => m.t + (yhi-v)/(yhi-ylo)*(H-m.t-m.b);
   let g = "";
   // zona objetivo
-  g += `<rect x="${X(0)}" y="${Y(yhi)}" width="${X(CRIT.cv[1]/100)-X(0)}" height="${Y(CRIT.lo[1]/100)-Y(yhi)}" fill="var(--brand-tint)"/>`;
-  g += `<text x="${X(0)+8}" y="${Y(yhi)+16}" font-size="11" font-weight="700" fill="var(--brand-dark)">Buena implantación</text>`;
+  g += `<rect x="${X(0)}" y="${Y(yhi)}" width="${X(tC/100)-X(0)}" height="${Y(tL/100)-Y(yhi)}" fill="var(--brand-tint)"/>`;
+  g += `<text x="${X(0)+8}" y="${Y(yhi)+16}" font-size="11" font-weight="700" fill="var(--brand-dark)">Bueno o mejor</text>`;
   // grilla
   for(let v=0; v<=xmax+1e-9; v+=0.1){ g += `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--line-2)"/><text x="${X(v)}" y="${H-m.b+16}" font-size="11" text-anchor="middle" fill="var(--muted)">${Math.round(v*100)}%</text>`; }
   const ystep = (yhi-ylo) > .4 ? .1 : .05;
   for(let v=Math.ceil(ylo/ystep)*ystep; v<=yhi+1e-9; v+=ystep){ g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-2)"/><text x="${m.l-6}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">${Math.round(v*100)}%</text>`; }
-  g += `<line x1="${X(CRIT.cv[1]/100)}" x2="${X(CRIT.cv[1]/100)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
-  g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(CRIT.lo[1]/100)}" y2="${Y(CRIT.lo[1]/100)}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  g += `<line x1="${X(tC/100)}" x2="${X(tC/100)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(tL/100)}" y2="${Y(tL/100)}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
   g += `<text x="${(m.l+W-m.r)/2}" y="${H-4}" font-size="11.5" text-anchor="middle" fill="var(--ink-2)" font-weight="600">Coeficiente de variación (menor es mejor)</text>`;
   g += `<text transform="translate(12 ${(m.t+H-m.b)/2}) rotate(-90)" font-size="11.5" text-anchor="middle" fill="var(--ink-2)" font-weight="600">Logro de plantas</text>`;
   // puntos + etiquetas de los que quedan fuera de la zona buena
   pts.forEach(R=>{ R._n = rows.indexOf(R)+1; });
   const lab = [];
   pts.forEach(R=>{
-    const x=X(R.cv), y=Y(R.logro), fuera = R.cv*100>CRIT.cv[1] || R.logro*100<CRIT.lo[1];
+    const x=X(R.cv), y=Y(R.logro), fuera = R.cv*100>tC || R.logro*100<tL;
     const tip = `<b>${esc(nice(R.e.Lote))} · ${esc(R.e.Ambiente||"lote")}</b><br>CV ${fp(R.cv)} · Logro ${fp(R.logro)}<br>${f0(R.plha)} pl/ha`;
     g += `<circle cx="${x}" cy="${y}" r="13" fill="transparent" data-tip="${esc(tip)}" data-go="${R.id}" style="cursor:pointer"/>`;
     g += `<circle cx="${x}" cy="${y}" r="5" fill="${fuera?"var(--ink-2)":"var(--brand)"}" stroke="var(--surface)" stroke-width="2" pointer-events="none"/>`;
@@ -530,13 +602,14 @@ function porSembradora(rows){
     return `<p class="semuna">Sembradora: <b>${esc(G.nombre)}</b>${contr.length?` · Contratista: <b>${esc(contr.join(", "))}</b>`:""}</p>`;
   }
   grupos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  const cel = (v, r) => `<span class="val">${fp(v)}</span>${chip(r)}`;
+  const cult = rows[0] ? rows[0].cult : "Maíz";
+  const cel = (v, r, tipo) => `<span class="val">${fp(v)}</span>${chip(r,"",tipo)}`;
   return `<div><div class="sec-h" style="margin:4px 0 6px"><h3 style="font-size:19px">Por sembradora</h3><p>Promedio de los lotes y ambientes sembrados con cada máquina</p></div>
     <div class="tw"><table class="sem"><thead><tr><th>Sembradora</th><th class="n">Lotes / amb.</th><th>Logro</th><th>Coef. de variación</th><th>Singulación</th><th class="n">Dobles</th><th class="n">Fallas</th></tr></thead><tbody>
     ${grupos.map(G=>{ const rs=G.rs, lo=mean(rs.map(R=>R.logro)), cv=mean(rs.map(R=>R.cv)), un=mean(rs.map(R=>R.unif));
       const contr = [...new Set(rs.map(R=>String(R.e.Contratista||"").trim()).filter(Boolean))];
       return `<tr><td class="nm">${esc(G.nombre)}${contr.length?`<small>${esc(contr.join(", "))}</small>`:""}</td><td class="n">${rs.length}</td>
-        <td>${cel(lo, rateHigh(lo,CRIT.lo))}</td><td>${cel(cv, rateLow(cv,CRIT.cv))}</td><td>${cel(un, rateHigh(un,CRIT.un))}</td>
+        <td>${cel(lo, rateLogro(lo,cult))}</td><td>${cel(cv, rateCV(cv,cult))}</td><td>${cel(un, rateUn(un), "un")}</td>
         <td class="n">${fp(mean(rs.map(R=>R.dob)),0)}</td><td class="n">${fp(mean(rs.map(R=>R.fal)),0)}</td></tr>`; }).join("")}
     </tbody></table></div></div>`;
 }
@@ -551,9 +624,9 @@ function render(){
   const fechas = rows.map(R=>String(R.e.Fecha||"")).filter(Boolean).sort();
   const K = { plha: mean(rows.map(R=>R.plha)), dens: mean(rows.map(R=>R.dens)), logro: mean(rows.map(R=>R.logro)), cv: mean(rows.map(R=>R.cv)),
               dob: mean(rows.map(R=>R.dob)), fal: mean(rows.map(R=>R.fal)), unif: mean(rows.map(R=>R.unif)), media: mean(rows.map(R=>R.media)), desv: mean(rows.map(R=>R.desv)) };
-  const rCV = rateLow(K.cv, CRIT.cv), rLo = rateHigh(K.logro, CRIT.lo), rUn = rateHigh(K.unif, CRIT.un);
-  const nBuenCV = rows.filter(R=>{ const r=rateLow(R.cv,CRIT.cv); return r!=null && r<=1; }).length;
-  const nBajoLo = rows.filter(R=>{ const r=rateHigh(R.logro,CRIT.lo); return r!=null && r>=2; }).length;
+  const rCV = rateCV(K.cv, cult), rLo = rateLogro(K.logro, cult), rUn = rateUn(K.unif);
+  const nBuenCV = rows.filter(R=>{ const r=rateCV(R.cv,R.cult); return r!=null && r<=2; }).length;
+  const nBajoLo = rows.filter(R=>{ const r=rateLogro(R.logro,R.cult); return r!=null && r>=3; }).length;
   const campos = [...new Set(rows.map(R=>nice(R.e.Campo)))];
   const hib = [...new Set(rows.map(R=>R.e.Genetica).filter(Boolean))];
   const peor = rows.filter(R=>R.cv!=null).sort((a,b)=>b.cv-a.cv)[0];
@@ -571,7 +644,7 @@ function render(){
     <div class="cv-foot"><span><b>SOS Agro</b> · Gdor. Irigoyen 283 · Trenque Lauquen</span><span>TE 02392-412732</span></div>`;
 
   const maxP = Math.max(...rows.map(R=>Math.max(R.plha||0, R.dens||0)))*1.04;
-  const maxCV = Math.max(CRIT.cv[2]/100*1.2, ...rows.map(R=>R.cv||0))*1.05;
+  const maxCV = Math.max(critDe(cult).cv[3]/100*1.15, ...rows.map(R=>R.cv||0))*1.05;
   const ckey = `tablero.com:${emp}|${camp}|${cult}|${campo}`, com = store.get(ckey, "");
 
   $("#summary").innerHTML = `<div class="pg">
@@ -579,14 +652,14 @@ function render(){
     <div class="ehead"><div><div class="eyebrow">Implantación · ${esc(cult)} ${esc(camp)}</div><h2>${esc(titulo)}</h2>
       <div class="sub">${esc(campo?nice(campo):campos.join(" · "))} · ${rows.length} ${rows.length===1?"lote/ambiente":"lotes y ambientes"} · ${fechas.length?fd(fechas[0])+(fechas.length>1&&fechas[0]!==fechas[fechas.length-1]?" al "+fd(fechas[fechas.length-1]):""):""}</div></div>
       <div class="legend noprint"><span>Tocá un lote para ver su detalle</span></div></div>
-    <p class="lead">El logro promedio de plantas fue <b>${fp(K.logro)}</b>${rLo!=null?` (${RNOM[rLo].toLowerCase()})`:""}.
-      La uniformidad espacial promedio fue <b>${fp(K.cv)}</b> de CV${rCV!=null?` (${RNOM[rCV].toLowerCase()})`:""}: ${nBuenCV} de ${rows.filter(R=>R.cv!=null).length} con CV bueno o muy bueno${nBajoLo?`, y ${nBajoLo} con logro regular o bajo`:""}.
-      ${peor && rateLow(peor.cv,CRIT.cv)>=2 ? `La mayor desuniformidad se dio en <b>${esc(nice(peor.e.Lote))} ${esc(peor.e.Ambiente||"")}</b> (CV ${fp(peor.cv,0)}).` : ""}
+    <p class="lead">El logro promedio de plantas fue <b>${fp(K.logro)}</b>${rLo!=null?` (${NIV[rLo].toLowerCase()})`:""}.
+      La uniformidad espacial promedio fue <b>${fp(K.cv)}</b> de CV${rCV!=null?` (${NIV[rCV].toLowerCase()})`:""}: ${nBuenCV} de ${rows.filter(R=>R.cv!=null).length} con CV bueno o mejor${nBajoLo?`, y ${nBajoLo} con logro regular o bajo`:""}.
+      ${peor && rateCV(peor.cv,peor.cult)>=3 ? `La mayor desuniformidad se dio en <b>${esc(nice(peor.e.Lote))} ${esc(peor.e.Ambiente||"")}</b> (CV ${fp(peor.cv,0)}).` : ""}
       ${hib.length?`Híbridos: ${esc(hib.join(", "))}.`:""}</p>
     <div class="kpis">
       <div class="kpi"><span class="l">Logro</span><span class="v">${fp(K.logro)}</span><span class="d">${chip(rLo)}</span></div>
       <div class="kpi"><span class="l">Coef. de variación</span><span class="v">${fp(K.cv)}</span><span class="d">${chip(rCV)} · DP ${f1(K.media)} ± ${f1(K.desv)} cm</span></div>
-      <div class="kpi"><span class="l">Singulación</span><span class="v">${fp(K.unif)}</span><span class="d">${chip(rUn)} · dobles ${fp(K.dob,0)} · fallas ${fp(K.fal,0)}</span></div>
+      <div class="kpi"><span class="l">Singulación</span><span class="v">${fp(K.unif)}</span><span class="d">${chip(rUn,"","un")} · dobles ${fp(K.dob,0)} · fallas ${fp(K.fal,0)}</span></div>
     </div>
     <p class="defs"><b>Singulación:</b> porcentaje de distancias entre plantas que no son ni dobles ni fallas, es decir, lugares donde quedó una sola planta, a una distancia razonable de la anterior. <b>Dobles:</b> dos plantas a 3 cm o menos. <b>Fallas:</b> distancia mayor al doble de la teórica (falta al menos una planta). Singulación = 100% − dobles − fallas.</p>
     ${porSembradora(rows)}
@@ -596,7 +669,7 @@ function render(){
   </section>
 
   <section class="card charts" style="margin-top:22px">
-    <div class="fig"><div class="sec-h" style="margin:0"><h3>Logro y uniformidad</h3></div><p style="margin:0;font-size:12.5px;color:var(--muted)">Cada punto es un lote o ambiente (el número es el de la tabla). La zona verde reúne buen logro (≥ ${CRIT.lo[1]}%) y buena uniformidad (CV ≤ ${CRIT.cv[1]}%).</p>${scatter(rows)}</div>
+    <div class="fig"><div class="sec-h" style="margin:0"><h3>Logro y uniformidad</h3></div><p style="margin:0;font-size:12.5px;color:var(--muted)">Cada punto es un lote o ambiente (el número es el de la tabla). La zona verde reúne logro y CV calificados como bueno o mejor (logro ≥ ${critDe(cult).logro[2]}%, CV ≤ ${critDe(cult).cv[2]}%).</p>${scatter(rows)}</div>
     <div class="fig"><div class="sec-h" style="margin:0"><h3>Plantas logradas</h3></div><p style="margin:0;font-size:12.5px;color:var(--muted)">Barras: plantas logradas por hectárea. Marca negra: densidad de siembra. A la derecha, % de logro.</p>${barrasLogradas(rows)}</div>
   </section>
   </div><div class="pg">
@@ -613,10 +686,10 @@ function render(){
         <td class="n">${fp(R.logro)}</td>
         <td><div style="display:flex;align-items:center;gap:8px">${barCV(R,maxCV)}<b>${fp(R.cv,0)}</b></div></td>
         <td>${barDist(R)}</td>
-        <td class="n">${chip(rateHigh(R.unif,CRIT.un)).replace(/<\/i>.*<\/span>/, `</i>${fp(R.unif,0)}</span>`)}</td></tr>`).join("")}</tbody>
+        <td class="n">${chip(rateUn(R.unif),"","un").replace(/<\/i>.*<\/span>/, `</i>${fp(R.unif,0)}</span>`)}</td></tr>`).join("")}</tbody>
       <tfoot><tr><td></td><td>Promedio</td><td></td><td></td><td></td><td class="n"></td><td></td><td class="n">${fp(K.logro)}</td><td>${fp(K.cv,0)}</td><td>${fp(K.dob,0)} · ${fp(K.unif,0)} · ${fp(K.fal,0)}</td><td class="n">${fp(K.unif,0)}</td></tr></tfoot>
     </table></div>
-    <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Calificación orientativa — CV: muy buena ≤ ${CRIT.cv[0]}%, buena ≤ ${CRIT.cv[1]}%, regular ≤ ${CRIT.cv[2]}%. Logro: muy bueno ≥ ${CRIT.lo[0]}%, bueno ≥ ${CRIT.lo[1]}%, regular ≥ ${CRIT.lo[2]}%. Singulación (distancias que no son dobles ni fallas): ≥ ${CRIT.un[0]}% / ${CRIT.un[1]}% / ${CRIT.un[2]}%. Doble: plantas a 3 cm o menos; falla: distancia mayor al doble de la teórica.</p>
+    <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Criterios para ${esc(cult.toLowerCase())} — ${critTexto(cult)} Singulación (orientativo): muy buena ≥ ${CRIT.un[0]}%, buena ≥ ${CRIT.un[1]}%, regular ≥ ${CRIT.un[2]}%. Doble: plantas a 3 cm o menos; falla: distancia mayor al doble de la teórica.</p>
   </section>
 
   </section></div>`;
@@ -624,14 +697,15 @@ function render(){
   $("#com").addEventListener("input", e=>{ store.set(ckey, e.target.value); $("#comP").textContent = e.target.value; e.target.closest(".comment").classList.toggle("vacio", !e.target.value.trim()); });
 
   $("#lotes").innerHTML = rows.map(R=>{
-    const e=R.e, rc=rateLow(R.cv,CRIT.cv), rl=rateHigh(R.logro,CRIT.lo), ru=rateHigh(R.unif,CRIT.un);
+    const e=R.e, rc=rateCV(R.cv,R.cult), rl=rateLogro(R.logro,R.cult), ru=rateUn(R.unif);
     const gps = numv(e.Latitud)!=null && numv(e.Longitud)!=null ? `<a href="https://www.google.com/maps?q=${numv(e.Latitud)},${numv(e.Longitud)}" target="_blank" rel="noopener">${numv(e.Latitud).toFixed(5)}, ${numv(e.Longitud).toFixed(5)}</a>` : "";
     const kv = [["Campo",nice(e.Campo)],["Fecha",fd(e.Fecha)],["Estado fenológico",e.Estado_fenologico],["Híbrido",e.Genetica],["Antecesor",e.Antecesor],["Densidad de siembra",R.dens?f0(R.dens)+" sem/ha":""],
       ["Espaciamiento",R.esp?f1(R.esp).replace(",0","")+" cm":""],["Dist. teórica",R.teo?f1(R.teo)+" cm":""],["Contratista",e.Contratista],["Sembradora",e.Sembradora],["Técnico",e.Tecnico],["GPS",gps]].filter(x=>x[1]);
     return `<article class="lote" id="${R.id}">
       <div class="h"><div><h4>${esc(nice(e.Lote))}<small>${esc(e.Ambiente?"ambiente "+e.Ambiente:"lote completo")}</small></h4>
-        <div class="meta">${esc(nice(e.Campo))} · ${fd(e.Fecha)}${e.Estado_fenologico?" · "+esc(e.Estado_fenologico):""} · ${R.nOk} de ${R.ss.length} surcos completos</div></div>
-        <div class="chips">${chip(rl,"Logro")}${chip(rc,"CV")}${chip(ru,"Singul.")}</div></div>
+        <div class="meta">${esc(nice(e.Campo))} · ${fd(e.Fecha)}${e.Estado_fenologico?" · "+esc(e.Estado_fenologico):""} · ${R.nOk} de ${R.ss.length} surcos completos${R.nRec>1?` · <b>une ${R.nRec} recuentos</b> (${esc(e.Tecnico||"")})`:""}</div>
+        ${R.distintos?`<div class="meta" style="color:var(--r3);font-weight:600">Atención: los recuentos unidos tienen distinta densidad o espaciamiento cargados; cada surco se calculó con los suyos.</div>`:""}</div>
+        <div class="chips">${chip(rl,"Logro")}${chip(rc,"CV")}${chip(ru,"Singul.","un")}</div></div>
       <div class="lgrid">
         <dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==="GPS"?v:esc(v)}</dd>`).join("")}</dl>
         <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
@@ -651,7 +725,7 @@ function render(){
           <div class="legend"><span><i style="background:var(--dob)"></i>Doble</span><span><i style="background:var(--brand)"></i>Aceptable</span><span><i style="background:var(--fal)"></i>Falla</span></div></div>
         <div class="fig"><div class="t">Detalle por surco</div>
           <table class="sur"><thead><tr><th>Surco</th><th>pl/ha</th><th>DP cm</th><th>Desvío</th><th>CV</th><th>Dobles</th><th>Fallas</th></tr></thead>
-          <tbody>${R.ss.map(s=> s.ok ? `<tr><td>${s.surco}</td><td>${f0(s.plha)}</td><td>${f1(s.media)}</td><td>${f1(s.desv)}</td><td>${fp(s.cv,0)}</td><td>${fp(s.dob,0)}</td><td>${fp(s.fal,0)}</td></tr>`
+          <tbody>${R.ss.map(s=> s.ok ? `<tr><td>${s.surco}${R.nRec>1&&s.tec?` <span style="color:var(--muted)">· ${esc(s.tec)}</span>`:""}</td><td>${f0(s.plha)}</td><td>${f1(s.media)}</td><td>${f1(s.desv)}</td><td>${fp(s.cv,0)}</td><td>${fp(s.dob,0)}</td><td>${fp(s.fal,0)}</td></tr>`
                  : `<tr><td>${s.surco}</td><td colspan="6" style="text-align:left;color:var(--muted)">incompleto (${s.n} de ${N_DIST} distancias)</td></tr>`).join("")}</tbody>
           <tfoot><tr><td>Prom.</td><td>${f0(R.plha)}</td><td>${f1(R.media)}</td><td>${f1(R.desv)}</td><td>${fp(R.cv,0)}</td><td>${fp(R.dob,0)}</td><td>${fp(R.fal,0)}</td></tr></tfoot></table>
           ${e.Observaciones?`<div class="obs" style="margin-top:8px"><b>Observaciones:</b> ${esc(e.Observaciones)}</div>`:""}
@@ -684,6 +758,8 @@ $("#btnPdf").onclick = () => {
 
 /* ---------- arranque ---------- */
 critUI();
+$("#cUnir").checked = store.get("tablero.unir", true);
+$("#cUnir").onchange = e => { store.set("tablero.unir", e.target.checked); if(claveGuardada()) cargar(claveGuardada()); };
 $("#url").value = direccion();
 if(claveGuardada()) cargar(claveGuardada());
 </script>
