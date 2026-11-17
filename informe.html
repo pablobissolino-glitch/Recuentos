@@ -98,6 +98,8 @@ const ANTECESOR = {"arveja":"arv","avena":"av","camelina":"cam","cebada":"ce","c
 const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
 const grupoCultivo = c => norm(c).startsWith("giras") ? "Girasol" : (norm(c).startsWith("maiz") ? "Maíz" : (c||"Sin cultivo"));
 let EV=[], SU={}, plantilla=null;
+const esMetroLineal = e => String(e.Metodo||"")==="Metro lineal" || /soja|trigo|cebada/i.test(String(e.Cultivo||""));
+
 
 /* ---------- unir recuentos del mismo lote ----------
    Cuando dos o más personas cuentan surcos del mismo lote y ambiente (misma empresa, campaña y cultivo)
@@ -171,7 +173,7 @@ $("#fClave").addEventListener("submit", async ev => {
   m.hidden=false; m.className="msg"; m.textContent="Cargando…";
   try{
     const j = await pedirDatos(clave); guardarClave(clave);
-    const u = unirRecuentos(j.evaluaciones, j.surcos||[]);
+    const u = unirRecuentos(j.evaluaciones.filter(e => !esMetroLineal(e)), j.surcos||[]);
     EV = u.evaluaciones.filter(e=>e.ID_Evaluacion);
     SU = {}; for(const s of u.surcos){ (SU[s.ID_Evaluacion] = SU[s.ID_Evaluacion]||[]).push(s); }
     for(const k in SU) SU[k].sort((a,b)=>(+a.Surco)-(+b.Surco));

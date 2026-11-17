@@ -369,7 +369,9 @@ function unirRecuentos(evs, surcos){
   return { evaluaciones: outE, surcos: outS };
 }
 
+const esMetroLineal = e => String(e.Metodo||"")==="Metro lineal" || /soja|trigo|cebada/i.test(String(e.Cultivo||""));
 function armar(evs, surcos){
+  evs = evs.filter(e => !esMetroLineal(e));   // soja, trigo y cebada (recuento por metro lineal) van en otra vista
   if(store.get("tablero.unir", true)){ const u = unirRecuentos(evs, surcos); evs = u.evaluaciones; surcos = u.surcos; }
   const por = {}; for(const s of surcos){ (por[s.ID_Evaluacion] = por[s.ID_Evaluacion] || []).push(s); }
   return evs.filter(e=>e.ID_Evaluacion).map(e=>{

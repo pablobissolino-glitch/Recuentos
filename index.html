@@ -141,6 +141,14 @@ label.f.err input{border-color:var(--bad)}
 .stat .n small{font-size:12px;font-weight:600;color:var(--muted)}
 .stat.big{grid-column:span 3}
 .stat.big .n{font-size:30px}
+.mcells{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mcell{border:1.5px solid var(--line);border-radius:8px;padding:4px 2px 5px;text-align:center;background:var(--surface);cursor:pointer;min-width:0;font:inherit;color:var(--ink)}
+.mcell .p{font-size:10px;color:var(--muted);font-weight:700}
+.mcell .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}
+.mcell.vacia{border-style:dashed;opacity:.6}
+.mcell.act{border-color:var(--accent);border-width:2.5px;opacity:1}
+.mcell.sel{border-color:var(--warn);border-width:2.5px;background:var(--warn-bg);opacity:1}
+.mpad{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:10px}
 .cal{display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:11.5px;font-weight:700;border:1.5px solid var(--line);border-radius:99px;padding:1px 8px;white-space:nowrap;color:var(--ink)}
 .cal i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .cal.c0 i{background:#0B7A2B}.cal.c1 i{background:#2FA344}.cal.c2 i{background:#9BC53D}.cal.c3 i{background:#E2A000}.cal.c4 i{background:#D03B3B}
@@ -237,7 +245,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
     <label class="f">Empresa<input id="iEmpresa" readonly tabindex="-1" placeholder="sale del lote"></label>
     <label class="f">Campo<input id="iCampo" readonly tabindex="-1" placeholder="sale del lote"></label>
     <label class="f">Cultivo
-      <select id="iCultivo"><option>Maíz</option><option>Maíz tardío</option><option>Girasol</option></select></label>
+      <select id="iCultivo"><option>Maíz</option><option>Maíz tardío</option><option>Girasol</option><option>Soja</option><option>Soja 2da</option><option>Trigo</option><option>Cebada</option></select></label>
     <label class="f">Genética<input id="iGen" list="dlGen" placeholder="Híbrido"></label>
     <label class="f">Ambiente / sitio
       <select id="iAmb"></select></label>
@@ -246,8 +254,8 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
     <label class="f full">Antecesor<input id="iAnt" list="dlAnt"></label>
     <label class="f">Contratista<input id="iContr" list="dlContr"></label>
     <label class="f">Sembradora<input id="iSemb" list="dlSemb"></label>
-    <label class="f" id="fEsp">Espaciamiento (cm)<input id="iEsp" inputmode="decimal" placeholder="52,5"></label>
-    <label class="f" id="fDens">Densidad de siembra (sem/ha)<input id="iDens" inputmode="numeric" placeholder="60000"></label>
+    <label class="f" id="fEsp"><span id="lEsp">Espaciamiento (cm)</span><input id="iEsp" inputmode="decimal" placeholder="52,5"></label>
+    <label class="f" id="fDens"><span id="lDens">Densidad de siembra (sem/ha)</span><input id="iDens" inputmode="numeric" placeholder="60000"></label>
     <label class="f full">Técnico<input id="iTec" autocomplete="name"></label>
     <div class="full">
       <button class="btn block" id="btnGPS" type="button">📍 Registrar ubicación GPS</button>
@@ -282,6 +290,27 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
   <label class="f">Sector / nota del surco (opcional)<input id="iSector"></label>
 </section>
 
+<!-- RECUENTO POR METRO LINEAL (soja, trigo, cebada) -->
+<section id="v-metros" hidden>
+  <p class="ctx" id="mCtx"></p>
+  <p class="status" id="mStatus"></p>
+  <div class="mcells" id="mCells"></div>
+  <div class="mpad">
+    <div class="padtop"><div class="padlbl"><span id="mLbl"></span><br><span class="padprev" id="mPrev"></span></div><div class="padnum" id="mNum">—</div></div>
+    <div class="keys" id="mKeys">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key del" data-k="del" aria-label="Borrar">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok" id="mOk">Enter ↵</button>
+    </div>
+  </div>
+  <div class="row">
+    <button class="mic" id="btnMicM" type="button"><span id="micTxtM">🎤 Dictar</span></button>
+  </div>
+  <div class="interim" id="interimM"></div>
+  <div class="stats" id="mStats"></div>
+</section>
+
 <!-- RESUMEN -->
 <section id="v-res" hidden>
   <h2 id="rTitle"></h2>
@@ -300,6 +329,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
   <div class="grid">
     <label class="f">Distancias por surco<input id="cPl" inputmode="numeric"></label>
     <label class="f">Surcos por evaluación<input id="cSur" inputmode="numeric"></label>
+    <label class="f">Metros por lote (soja, trigo, cebada)<input id="cML" inputmode="numeric"></label>
     <label class="f full">Técnico (se propone en cada evaluación)<input id="cTec"></label>
   </div>
   <div class="card">
@@ -360,7 +390,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <script src="vosk.js"></script>
 <script>
 "use strict";
-const VERSION = "1.5.4";
+const VERSION = "1.6.0";
 const DOBLE_CM = 3, FALLA_X = 2;   // criterio de dobles y fallas
 /* Calificación de logro y CV por cultivo (criterios del equipo) */
 const CRITERIOS = { "Maíz": { logro:[95,90,85,80], cv:[20,25,30,40] }, "Girasol": { logro:[95,90,80,70], cv:[20,25,35,40] } };
@@ -375,8 +405,8 @@ const $ = s => document.querySelector(s);
 const KEY = "implantacion.v1";
 
 /* ---------------- almacenamiento ---------------- */
-let db = { evals: [], cfg: { nPl: 15, nSur: 6, tec: "" }, lotes: null, lotesFecha: null };
-function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
+let db = { evals: [], cfg: { nPl: 15, nSur: 6, nML: 20, tec: "" }, lotes: null, lotesFecha: null };
+function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,nML:20,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("¡No se pudo guardar! Exportá los datos ahora."); } }
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
 const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
@@ -427,7 +457,19 @@ function calc(vals, esp, dens, n){
   }
   return r;
 }
+/* ---------------- recuento por metro lineal (soja, trigo, cebada) ---------------- */
+const esML = ev => /soja|trigo|cebada/i.test((ev && ev.cultivo) || "");
+function mlCalc(ev){
+  const v = (ev.metros||[]).filter(x=>x!=null), n = v.length, esp = num(ev.esp), dens = num(ev.dens), N = db.cfg.nML;
+  const R = { ml:true, vals:v, n, N, ok: n>=N, esp, dens };
+  if(n){ R.prom = v.reduce((a,x)=>a+x,0)/n; R.desv = n>1 ? Math.sqrt(v.reduce((a,x)=>a+(x-R.prom)*(x-R.prom),0)/(n-1)) : null;
+    R.cv = R.desv!=null && R.prom>0 ? R.desv/R.prom : null; R.min = Math.min(...v); R.max = Math.max(...v);
+    if(esp>0){ R.plm2 = R.prom/(esp/100); R.desvm2 = R.desv!=null ? R.desv/(esp/100) : null; }
+    R.logro = R.plm2!=null && dens>0 ? R.plm2/dens : null; }
+  return R;
+}
 function evalCalc(ev){
+  if(esML(ev)) return mlCalc(ev);
   const n = db.cfg.nPl, esp = num(ev.esp), dens = num(ev.dens);
   const rs = ev.surcos.map(s => calc(parseNums(s.texto), esp, dens, n));
   const ok = rs.filter(r=>r.ok);
@@ -453,23 +495,24 @@ function fmtFecha(s){ if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}
 let view = "home", cur = null, curS = 0;
 function show(v){
   view = v;
-  for(const id of ["home","eval","surcos","res","cfg"]) $("#v-"+id).hidden = id!==v;
+  for(const id of ["home","eval","surcos","metros","res","cfg"]) $("#v-"+id).hidden = id!==v;
   $("#btnBack").hidden = v==="home";
   $("#btnCfg").hidden = v!=="home";
   const ev = cur;
   $("#ttl").textContent = v==="home" ? "Recuentos de Implantación" : v==="cfg" ? "Ajustes" :
     (ev ? (ev.lote||"Sin lote") + (ev.ambiente ? " · "+ev.ambiente : "") : "");
   renderFoot(); window.scrollTo(0,0);
-  if(v==="surcos") wake(true); else wake(false);
+  if(v==="surcos"||v==="metros") wake(true); else wake(false);
   if(v!=="surcos" && padOn){ padOn=false; $("#pad").hidden=true; document.body.classList.remove("padon"); $("#iDist").readOnly=false; $("#btnKb").textContent="⌨︎ Teclado"; }
-  if(v!=="surcos") stopMic();
+  if(v!=="surcos" && v!=="metros") stopMic();
 }
 function renderFoot(){
   const f = $("#foot"); f.innerHTML = "";
   const b = (txt, cls, fn) => { const x=document.createElement("button"); x.className="btn "+cls; x.textContent=txt; x.onclick=fn; f.appendChild(x); return x; };
   if(view==="home"||view==="cfg"){ f.hidden = true; return; }
   f.hidden = false;
-  if(view==="eval"){ b("Ir a los surcos →","primary",()=>{ if(validEval()) { show("surcos"); renderSurcos(); } }); }
+  if(view==="eval"){ b(esML(cur)?"Ir al recuento →":"Ir a los surcos →","primary",()=>{ if(validEval()) { if(esML(cur)){ show("metros"); renderMetros(); } else { show("surcos"); renderSurcos(); } } }); }
+  if(view==="metros"){ b("Datos","",()=>{ show("eval"); fillEval(); }); const R=mlCalc(cur); b("Ver resultado", R.ok?"primary":"", ()=>{ stopMic(); show("res"); renderRes(); }); }
   if(view==="surcos"){
     b("Datos","",()=>{ show("eval"); fillEval(); });
     const R = calc(parseNums(cur.surcos[curS].texto), num(cur.esp), num(cur.dens), db.cfg.nPl);
@@ -478,13 +521,13 @@ function renderFoot(){
     else { b("Ver resultado","primary",()=>{ show("res"); renderRes(); }); }
   }
   if(view==="surcos" && padOn) f.hidden = true;
-  if(view==="res"){ b("← Surcos","",()=>{ show("surcos"); renderSurcos(); }); b("Terminar","dark",()=>{ cur=null; show("home"); renderHome(); toast("Evaluación guardada en el celular"); sync(false); }); }
+  if(view==="res"){ b(esML(cur)?"← Recuento":"← Surcos","",()=>{ if(esML(cur)){ show("metros"); renderMetros(); } else { show("surcos"); renderSurcos(); } }); b("Terminar","dark",()=>{ cur=null; show("home"); renderHome(); toast("Evaluación guardada en el celular"); sync(false); }); }
 }
 $("#btnBack").onclick = () => {
   if(view==="cfg"){ readCfg(); show("home"); renderHome(); }
   else if(view==="eval"){ cur=null; show("home"); renderHome(); }
-  else if(view==="surcos"){ show("eval"); fillEval(); }
-  else if(view==="res"){ show("surcos"); renderSurcos(); }
+  else if(view==="surcos"||view==="metros"){ show("eval"); fillEval(); }
+  else if(view==="res"){ if(esML(cur)){ show("metros"); renderMetros(); } else { show("surcos"); renderSurcos(); } }
 };
 $("#btnCfg").onclick = () => { show("cfg"); renderCfg(); };
 
@@ -499,8 +542,8 @@ function renderHome(){
   else {
     L.innerHTML = `<div class="list">${evs.map(ev=>{ const R = evalCalc(ev);
       return `<button class="item" data-id="${ev.id}"><span class="t">${esc(ev.lote||"Sin lote")}${ev.ambiente?" · "+esc(ev.ambiente):""}${db.cfg.url ? ((ev.enviado && (ev.actualizado||0)<=ev.enviado) ? '<span class="tag exp">enviada</span>' : '<span class="tag pend">por enviar</span>') : (ev.exportado?'<span class="tag exp">exportada</span>':'<span class="tag pend">sin exportar</span>')}</span>
-      <span class="s">${fmtFecha(ev.fecha)} · ${esc(ev.campo||"")} · ${esc(ev.cultivo)} · ${R.nOk}/${ev.surcos.length} surcos</span>
-      <span class="k num"><b>${R.plha==null?"—":f0(R.plha)}</b>pl/ha · CV ${R.cv==null?"—":fp(R.cv)}</span></button>`; }).join("")}</div>`;
+      <span class="s">${fmtFecha(ev.fecha)} · ${esc(ev.campo||"")} · ${esc(ev.cultivo)} · ${R.ml ? `${R.n}/${R.N} metros` : `${R.nOk}/${ev.surcos.length} surcos`}</span>
+      <span class="k num">${R.ml ? `<b>${R.plm2==null?"—":f0(R.plm2)}</b>pl/m² · CV ${R.cv==null?"—":fp(R.cv)}` : `<b>${R.plha==null?"—":f0(R.plha)}</b>pl/ha · CV ${R.cv==null?"—":fp(R.cv)}`}</span></button>`; }).join("")}</div>`;
     L.querySelectorAll(".item").forEach(x=>x.onclick=()=>{ cur = db.evals.find(e=>e.id===x.dataset.id); curS=0; show("res"); renderRes(); });
   }
   const pend = db.evals.filter(e=>!e.exportado).length;
@@ -542,7 +585,7 @@ function fillEval(){
   $("#gpsTxt").textContent = cur.lat!=null ? `Ubicación: ${cur.lat.toFixed(5)}, ${cur.lon.toFixed(5)} (±${Math.round(cur.prec)} m)` : "El GPS funciona sin señal de datos.";
   $("#btnDel").hidden = false; $("#btnDel").textContent = "Eliminar evaluación"; delArm=false;
   $("#evErr").hidden = true; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
-  bloqueo();
+  bloqueo(); etiquetas();
 }
 // hasta que no se elija un lote de la lista, el resto del formulario queda bloqueado
 const loteOk = () => !!(cur && cur.lote && cur.empresa);   // empresa y campo solo salen de la lista
@@ -557,7 +600,17 @@ for(const [id,k] of Object.entries(F)){
 }
 $("#iTec").addEventListener("change", e=>{ db.cfg.tec = e.target.value; save(); });
 // buscador de lotes
-function cultivoDe(c){ c=(c||"").toLowerCase(); if(c.includes("giras")) return "Girasol"; if(c.includes("tard")) return "Maíz tardío"; return "Maíz"; }
+function cultivoDe(c){ c=(c||"").toLowerCase(); if(c.includes("giras")) return "Girasol"; if(c.includes("soja")) return /2|seg/.test(c)?"Soja 2da":"Soja";
+  if(c.includes("trigo")) return "Trigo"; if(c.includes("ceb")) return "Cebada"; if(c.includes("tard")) return "Maíz tardío"; return "Maíz"; }
+// densidad del lote/ambiente: en maíz y girasol viene en sem/m² y se pasa a sem/ha; en soja y fina queda en pl/m²
+const densDesdeLista = d => esML(cur) ? String(d).replace(".",",") : String(Math.round(d*10000));
+function etiquetas(){
+  const ml = esML(cur);
+  $("#lEsp").textContent = ml ? "Distancia entre hileras (cm)" : "Espaciamiento (cm)";
+  $("#lDens").textContent = ml ? "Densidad objetivo (pl/m², opcional)" : "Densidad de siembra (sem/ha)";
+  $("#iDens").placeholder = ml ? "70" : "60000"; $("#iEsp").placeholder = ml ? "26" : "52,5";
+}
+$("#iCultivo").addEventListener("change", () => { etiquetas(); renderFoot(); });
 $("#iLote").addEventListener("input", ()=>{
   const q = $("#iLote").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
   const S = $("#sugs");
@@ -584,7 +637,7 @@ $("#iLote").addEventListener("blur", ()=>setTimeout(()=>{ $("#sugs").hidden=true
 function pickLote(l){
   cur.lote=l[0]; cur.empresa=l[1]; cur.campo=l[2]; cur.cultivo=cultivoDe(l[3]); cur.antecesor=l[4]||cur.antecesor;
   if(l[5]) cur.esp = String(l[5]).replace(".",",");
-  if(l[6]) cur.dens = String(Math.round(l[6]*10000));
+  if(l[6]) cur.dens = densDesdeLista(l[6]);
   if(l[8]) cur.genetica = l[8];
   const ambs = l[7] ? Object.keys(l[7]) : [];
   if(ambs.length===1 && !cur.ambiente) cur.ambiente = ambs[0];
@@ -597,8 +650,13 @@ function validEval(){
   const errs=[]; ["fLote","fEsp","fDens"].forEach(i=>$("#"+i).classList.remove("err"));
   if(!loteOk()){ errs.push("el lote (elegilo de la lista)"); $("#fLote").classList.add("err"); }
   const e=num(cur.esp), d=num(cur.dens);
-  if(!(e>=15&&e<=120)){ errs.push("el espaciamiento entre surcos (cm)"); $("#fEsp").classList.add("err"); }
-  if(!(d>=10000&&d<=200000)){ errs.push("la densidad de siembra en semillas por hectárea (ej. 60000)"); $("#fDens").classList.add("err"); }
+  if(esML(cur)){
+    if(!(e>=10&&e<=120)){ errs.push("la distancia entre hileras (cm)"); $("#fEsp").classList.add("err"); }
+    if(cur.dens!=="" && cur.dens!=null && !(d>=5&&d<=2000)){ errs.push("la densidad objetivo en plantas por m² (ej. 70), o dejala vacía"); $("#fDens").classList.add("err"); }
+  } else {
+    if(!(e>=15&&e<=120)){ errs.push("el espaciamiento entre surcos (cm)"); $("#fEsp").classList.add("err"); }
+    if(!(d>=10000&&d<=200000)){ errs.push("la densidad de siembra en semillas por hectárea (ej. 60000)"); $("#fDens").classList.add("err"); }
+  }
   if(errs.length){ $("#evErr").textContent = "Falta completar "+errs.join(", ")+"."; $("#evErr").hidden=false; return false; }
   $("#evErr").hidden=true; return true;
 }
@@ -761,7 +819,7 @@ function numPalabras(n){
   if(n<1000) return H[Math.floor(n/100)] + (n%100 ? " "+numPalabras(n%100) : "");
   return "mil" + (n%1000 ? " "+numPalabras(n%1000) : "");
 }
-const GRAMATICA = JSON.stringify([...Array.from({length:1500},(_,i)=>numPalabras(i+1)), "[unk]"]);
+const GRAMATICA = JSON.stringify(["cero", ...Array.from({length:1500},(_,i)=>numPalabras(i+1)), "[unk]"]);
 
 function vozListo(){ return !!(db.cfg && db.cfg.voz === MODEL_KEY); }
 function micHint(){
@@ -773,6 +831,7 @@ function micHint(){
 }
 function setMicUI(on, txt){
   $("#btnMic").classList.toggle("on", on); $("#micTxt").textContent = txt || (on ? "Escuchando… tocá para parar" : "Dictar");
+  $("#btnMicM").classList.toggle("on", on); $("#micTxtM").textContent = txt || (on ? "Escuchando… tocá para parar" : "🎤 Dictar");
   $("#iDist").classList.toggle("listen", on); if(!on) $("#interim").textContent = "";
 }
 function useKeyboard(msg){
@@ -800,6 +859,7 @@ function descartarPend(motivo){
   pend=null;
 }
 function aceptarNumero(x){
+  if(view==="metros"){ mlAgregar(x); return; }
   if(curS!==ultSurco){ pend=null; clearTimeout(pendT); ultSurco=curS; ultT=0; }
   const v = parseNums(cur.surcos[curS].texto), n = db.cfg.nPl;
   if(v.length >= n) return;
@@ -1010,6 +1070,12 @@ function startSession(){
 
 /* ---- botón Dictar ---- */
 function startMic(){
+  if(view==="metros"){
+    if(mlCalc(cur).ok){ toast(`Ya están los ${db.cfg.nML} metros. Tocá un valor para corregirlo.`,3500); return; }
+    if(vozListo()){ recOn=true; vozStart(); return; }
+    if(SR && navigator.onLine){ recOn=true; setMicUI(true); buzz(30); startSession(); return; }
+    toast("Para dictar sin señal, descargá el dictado en Ajustes una vez con wifi. Mientras tanto, usá el teclado.",4500); return;
+  }
   const r = calc(parseNums(cur.surcos[curS].texto), num(cur.esp), num(cur.dens), db.cfg.nPl);
   if(r.n >= db.cfg.nPl){ toast(`Este surco ya tiene las ${db.cfg.nPl} distancias. Borrá con “⌫ Último” si querés corregir.`,4000); return; }
   $("#iDist").blur(); if(padOn){ db.cfg.pad=false; save(); padShow(false); }
@@ -1022,10 +1088,73 @@ $("#btnMic").onclick = () => { if(recOn){ stopMic(); return; } startMic(); };
 /* ---------------- pantalla activa ---------------- */
 let lock=null;
 async function wake(on){ try{ if(on && "wakeLock" in navigator && !lock){ lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release",()=>lock=null); } if(!on && lock){ lock.release(); lock=null; } }catch(e){} }
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && view==="surcos") wake(true); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && (view==="surcos"||view==="metros")) wake(true); });
+
+/* ---------------- recuento por metro lineal: pantalla ---------------- */
+let mBuf = "", mSel = null;
+function mlGuardar(v){ cur.metros = v; cur.actualizado = Date.now(); cur.exportado = null; save(); }
+function renderMetros(){
+  if(!cur) return;
+  if(!Array.isArray(cur.metros)) cur.metros = [];
+  const R = mlCalc(cur), N = R.N, v = cur.metros;
+  $("#mCtx").textContent = `${cur.campo?cur.campo+" · ":""}${cur.cultivo} · ${String(cur.esp).replace(".",",")} cm entre hileras${num(cur.dens)?` · objetivo ${cur.dens} pl/m²`:""}`;
+  const S = $("#mStatus");
+  if(!v.length){ S.className="status"; S.textContent = `Contá las plantas en 1 metro lineal y cargá el número. Son ${N} metros.`; }
+  else if(!R.ok){ S.className="status part"; S.textContent = `${v.length} de ${N} metros. Faltan ${N-v.length}.`; }
+  else { S.className="status ok"; S.textContent = `✓ Recuento completo: ${N} metros.`; }
+  let h = "";
+  for(let i=0;i<N;i++){ const x=v[i], act = mSel==null && i===v.length, sel = mSel===i;
+    h += `<button type="button" class="mcell ${x==null?"vacia":""} ${act?"act":""} ${sel?"sel":""}" data-i="${i}"><div class="p">M${i+1}</div><div class="v">${x==null?"·":x}</div></button>`; }
+  $("#mCells").innerHTML = h;
+  $("#mCells").querySelectorAll(".mcell").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; if(i < v.length){ mSel = (mSel===i ? null : i); mBuf=""; renderMetros(); } });
+  // teclado
+  $("#mLbl").textContent = mSel!=null ? `Corregir metro ${mSel+1} (era ${v[mSel]})` : (R.ok ? "Recuento completo ✓" : `Metro ${v.length+1} de ${N}`);
+  $("#mPrev").textContent = mSel!=null ? "Escribí el valor correcto y Enter" : (R.ok ? "Enter para ver el resultado" : (v.length ? `anterior: ${v[v.length-1]} plantas` : "plantas en 1 metro lineal"));
+  $("#mNum").textContent = mBuf || (R.ok && mSel==null ? "✓" : "—");
+  $("#mOk").textContent = (R.ok && mSel==null && !mBuf) ? "Listo →" : "Enter ↵";
+  // estadísticas
+  const st = (l,val,u="",big="") => `<div class="stat ${big}"><div class="l">${l}</div><div class="n">${val}${u?` <small>${u}</small>`:""}</div></div>`;
+  $("#mStats").innerHTML = v.length ? st("Plantas por m²", f0(R.plm2), "pl/m²", "big") + st("Por metro", f1(R.prom), "pl/m") + st("Desvío", f1(R.desvm2), "pl/m²") + st("CV", fp(R.cv)) +
+      (R.logro!=null ? st("Logro", fp(R.logro)) : "") + st("Mín – máx", `${R.min} – ${R.max}`, "pl/m") + st("Metros", `${v.length}/${N}`)
+    : st("Plantas por m²","—","pl/m²","big");
+  renderFoot();
+}
+function mlAgregar(x){
+  if(!cur || !esML(cur)) return;
+  const v = (cur.metros||[]).slice(), N = db.cfg.nML;
+  if(x > 400){ toast(`Se descartó ${x}: es demasiado para un metro. Repetí el valor.`,3000); buzz([80,40,80]); return; }
+  if(mSel!=null){ v[mSel] = x; mSel = null; mlGuardar(v); renderMetros(); buzz(15); return; }
+  if(v.length >= N) return;
+  v.push(x); mlGuardar(v); renderMetros(); buzz(10);
+  if(v.length >= N){ if(recOn) stopMic(); buzz([60,60,60]); toast(`Recuento completo: ${N} metros.`); }
+}
+function mKey(k){
+  const R = mlCalc(cur), v = cur.metros||[];
+  if(/^\d$/.test(k)){ if(R.ok && mSel==null){ buzz(80); return; } if(mBuf.length<3){ mBuf = (mBuf==="0"?"":mBuf)+k; buzz(8); } renderMetros(); return; }
+  if(k==="del"){
+    if(mBuf) mBuf = mBuf.slice(0,-1);
+    else if(mSel!=null) mSel = null;
+    else if(v.length){ mlGuardar(v.slice(0,-1)); toast("Se borró el último metro",1500); }
+    buzz(8); renderMetros(); return;
+  }
+  if(k==="ok"){
+    if(mBuf){ const x = parseInt(mBuf,10); mBuf = ""; mlAgregar(x); return; }
+    if(R.ok && mSel==null){ stopMic(); show("res"); renderRes(); return; }
+    buzz(60);
+  }
+}
+$("#mKeys").addEventListener("click", e=>{ const b=e.target.closest(".key"); if(b) mKey(b.dataset.k); });
+document.addEventListener("keydown", e=>{
+  if(view!=="metros") return;
+  if(/^\d$/.test(e.key)){ mKey(e.key); e.preventDefault(); }
+  else if(e.key==="Backspace"){ mKey("del"); e.preventDefault(); }
+  else if(e.key==="Enter"){ mKey("ok"); e.preventDefault(); }
+});
+$("#btnMicM").onclick = () => { if(recOn){ stopMic(); return; } startMic(); };
 
 /* ---------------- resumen ---------------- */
 function renderRes(){
+  if(esML(cur)) return renderResML();
   const ev=cur, R=evalCalc(ev);
   $("#rTitle").textContent = `${ev.lote||"Sin lote"}${ev.ambiente?" · "+ev.ambiente:""}`;
   $("#rCtx").textContent = `${fmtFecha(ev.fecha)} · ${ev.campo||""} · ${ev.cultivo}${ev.ef?" · "+ev.ef:""} · ${R.nOk} de ${ev.surcos.length} surcos completos`;
@@ -1038,6 +1167,20 @@ function renderRes(){
   t += `</tbody><tfoot><tr><td>Promedio</td><td>${f0(R.plha)}</td><td>${f1(R.media)}</td><td>${f1(R.desv)}</td><td>${fp(R.cv)}</td><td>${fp(R.dob)}</td><td>${fp(R.fal)}</td><td>${fp(R.unif)}</td></tr></tfoot>`;
   $("#rTbl").innerHTML = t;
   const kv = [["Empresa",ev.empresa],["Antecesor",ev.antecesor],["Contratista",ev.contratista],["Sembradora",ev.sembradora],["Genética",ev.genetica],["Espaciamiento",ev.esp?String(ev.esp).replace(".",",")+" cm":""],["Densidad",ev.dens?f0(num(ev.dens))+" sem/ha":""],["Técnico",ev.tecnico],["GPS",ev.lat!=null?`${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)}`:""]];
+  $("#rKv").innerHTML = kv.filter(k=>k[1]).map(k=>`<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join("");
+  $("#rObs").value = ev.obs || "";
+}
+function renderResML(){
+  const ev=cur, R=mlCalc(ev);
+  $("#rTitle").textContent = `${ev.lote||"Sin lote"}${ev.ambiente?" · "+ev.ambiente:""}`;
+  $("#rCtx").textContent = `${fmtFecha(ev.fecha)} · ${ev.campo||""} · ${ev.cultivo}${ev.ef?" · "+ev.ef:""} · ${R.n} de ${R.N} metros`;
+  const st = (l,v,u="",big="") => `<div class="stat ${big}"><div class="l">${l}</div><div class="n">${v}${u?` <small>${u}</small>`:""}</div></div>`;
+  $("#rStats").innerHTML = st("Plantas por m²", f0(R.plm2), "pl/m²", "big") + st("Por metro lineal", f1(R.prom), "pl/m") + st("Desvío", f1(R.desvm2), "pl/m²") + st("CV", fp(R.cv)) +
+    (R.logro!=null ? st("Logro", fp(R.logro)) : st("Logro", "—")) + st("Mín – máx", R.n?`${R.min} – ${R.max}`:"—", "pl/m") + st("Metros", `${R.n}/${R.N}`);
+  let t = `<thead><tr><th colspan="5" style="text-align:left">Plantas por metro lineal</th></tr></thead><tbody>`;
+  for(let i=0;i<R.N;i+=5){ t += "<tr>" + [0,1,2,3,4].map(k=>{ const j=i+k; return j<R.N ? `<td style="text-align:left"><span style="color:var(--muted);font-size:11px">M${j+1}</span> <b>${R.vals[j]??"—"}</b></td>` : "<td></td>"; }).join("") + "</tr>"; }
+  $("#rTbl").innerHTML = t + "</tbody>";
+  const kv = [["Empresa",ev.empresa],["Antecesor",ev.antecesor],["Contratista",ev.contratista],["Sembradora",ev.sembradora],["Genética",ev.genetica],["Entre hileras",ev.esp?String(ev.esp).replace(".",",")+" cm":""],["Densidad objetivo",ev.dens?ev.dens+" pl/m²":""],["Técnico",ev.tecnico],["GPS",ev.lat!=null?`${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)}`:""]];
   $("#rKv").innerHTML = kv.filter(k=>k[1]).map(k=>`<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join("");
   $("#rObs").value = ev.obs || "";
 }
@@ -1054,13 +1197,16 @@ function buildExport(evs){
   const D = Array.from({length:n},(_,i)=>"D"+String(i+1).padStart(2,"0"));
   const s = [[...head,"Surco","Sector",...D,"Estado","Dist_media","Plantas_ha","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
   const r = [[...head,"Surcos_completos","Plantas_ha","Pct_logro","Dist_media","Desvio","CV","Pct_dobles","Pct_fallas","Uniformidad"]];
+  const NM = db.cfg.nML, M = Array.from({length:NM},(_,i)=>"M"+String(i+1).padStart(2,"0"));
+  const m = [[...head,"Metros_contados","Pl_mL_prom","Desvio_pl_mL","Pl_m2","Desvio_pl_m2","CV","Pct_logro",...M]];
   for(const ev of evs){
+    if(esML(ev)){ const R = mlCalc(ev); m.push([...hv(ev), R.n, dec(R.prom), dec(R.desv), dec(R.plm2), dec(R.desvm2), dec(R.cv), dec(R.logro), ...M.map((_,k)=>R.vals[k]??"")]); continue; }
     const R = evalCalc(ev);
     ev.surcos.forEach((su,i)=>{ const c=R.rs[i]; if(!c.n) return;
       s.push([...hv(ev), i+1, su.sector, ...D.map((_,k)=>c.vals[k]??""), c.ok?"OK":"INCOMPLETO", dec(c.media), dec(c.plha), dec(c.desv), dec(c.cv), dec(c.dob), dec(c.fal), dec(c.unif)]); });
     r.push([...hv(ev), R.nOk, dec(R.plha), dec(R.logro), dec(R.media), dec(R.desv), dec(R.cv), dec(R.dob), dec(R.fal), dec(R.unif)]);
   }
-  return { surcos: toCSV(s), resumen: toCSV(r), json: JSON.stringify({app:"recuentos-implantacion", version:VERSION, exportado:new Date().toISOString(), evals:evs}, null, 1) };
+  return { surcos: toCSV(s), resumen: toCSV(r), metros: m.length>1 ? toCSV(m) : null, json: JSON.stringify({app:"recuentos-implantacion", version:VERSION, exportado:new Date().toISOString(), evals:evs}, null, 1) };
 }
 async function doExport(all){
   const evs = all ? db.evals : db.evals.filter(e=>!e.exportado);
@@ -1069,6 +1215,7 @@ async function doExport(all){
   const files = [ new File([x.surcos], `implantacion_surcos_${st}.csv`, {type:"text/csv"}),
                   new File([x.resumen], `implantacion_resumen_${st}.csv`, {type:"text/csv"}),
                   new File([x.json], `implantacion_respaldo_${st}.json`, {type:"application/json"}) ];
+  if(x.metros) files.splice(2, 0, new File([x.metros], `implantacion_metro_lineal_${st}.csv`, {type:"text/csv"}));
   let ok=false;
   try{
     if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:"Recuentos de implantación", text:`${evs.length} evaluaciones de implantación`}); ok=true; }
@@ -1081,7 +1228,7 @@ $("#btnExpAll").onclick = () => doExport(true);
 
 /* ---------------- ajustes ---------------- */
 function renderCfg(){
-  $("#cPl").value = db.cfg.nPl; $("#cSur").value = db.cfg.nSur; $("#cTec").value = db.cfg.tec||"";
+  $("#cPl").value = db.cfg.nPl; $("#cSur").value = db.cfg.nSur; $("#cML").value = db.cfg.nML; $("#cTec").value = db.cfg.tec||"";
   $("#lotesInfo").textContent = `${lotes().length} lotes cargados${db.lotesFecha?` (${db.lotesOrigen==="planilla"?"bajada de la planilla":"desde CSV"} el ${new Date(db.lotesFecha).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})})`:" (lista original de la planilla 25-26)"}.`;
   $("#verInfo").textContent = `Versión ${VERSION} · ${db.evals.length} evaluaciones guardadas en este celular.`;
   renderVoz();
@@ -1090,9 +1237,10 @@ function renderCfg(){
 }
 function readCfg(){
   const p=parseInt($("#cPl").value,10), s=parseInt($("#cSur").value,10);
+  const mm=parseInt($("#cML").value,10); if(mm>=5&&mm<=60) db.cfg.nML=mm;
   if(p>=5&&p<=40) db.cfg.nPl=p; if(s>=1&&s<=20) db.cfg.nSur=s; db.cfg.tec=$("#cTec").value.trim(); save();
 }
-["cPl","cSur","cTec"].forEach(i=>$("#"+i).addEventListener("change",readCfg));
+["cPl","cSur","cML","cTec"].forEach(i=>$("#"+i).addEventListener("change",readCfg));
 $("#fLotes").onchange = async e => {
   const f=e.target.files[0]; if(!f) return;
   try{
@@ -1126,11 +1274,23 @@ if("serviceWorker" in navigator && location.protocol!=="file:"){
 let syncing=false;
 const r6 = v => v==null || !isFinite(v) ? "" : Math.round(v*1e6)/1e6;
 function campania(f){ if(!f) return ""; const y=+f.slice(0,4), m=+f.slice(5,7); const a = m>=7 ? y : y-1; return `${String(a).slice(2)}-${String(a+1).slice(2)}`; }
+function payloadML(ev){
+  const R = mlCalc(ev);
+  const ev2 = { ID_Evaluacion: ev.id, Fecha: ev.fecha, Campania: campania(ev.fecha), Tecnico: ev.tecnico, Empresa: ev.empresa, Campo: ev.campo, Lote: ev.lote,
+    Cultivo: ev.cultivo, Ambiente: ev.ambiente, Estado_fenologico: ev.ef, Antecesor: ev.antecesor, Contratista: ev.contratista, Sembradora: ev.sembradora, Genetica: ev.genetica||"",
+    Espaciamiento_cm: r6(num(ev.esp)), Densidad_siembra: "", Metodo: "Metro lineal", Densidad_objetivo_pl_m2: r6(num(ev.dens)),
+    Latitud: r6(ev.lat), Longitud: r6(ev.lon), Observaciones: ev.obs,
+    Metros_contados: R.n, Pl_mL_prom: r6(R.prom), Desvio_pl_mL: r6(R.desv), Pl_m2: r6(R.plm2), Desvio_pl_m2: r6(R.desvm2), CV: r6(R.cv), Pct_logro: r6(R.logro) };
+  for(let k=0;k<R.N;k++) ev2["M"+String(k+1).padStart(2,"0")] = R.vals[k] ?? "";
+  ev2.Actualizado = new Date(ev.actualizado||Date.now()).toISOString(); ev2.Version_app = VERSION;
+  return { evaluacion: ev2, surcos: [] };
+}
 function payload(ev){
+  if(esML(ev)) return payloadML(ev);
   const R = evalCalc(ev), n = db.cfg.nPl;
   const base = { ID_Evaluacion: ev.id, Fecha: ev.fecha, Campania: campania(ev.fecha), Tecnico: ev.tecnico, Empresa: ev.empresa, Campo: ev.campo, Lote: ev.lote,
     Cultivo: ev.cultivo, Ambiente: ev.ambiente, Estado_fenologico: ev.ef, Antecesor: ev.antecesor, Contratista: ev.contratista, Sembradora: ev.sembradora, Genetica: ev.genetica||"",
-    Espaciamiento_cm: r6(num(ev.esp)), Densidad_siembra: r6(num(ev.dens)) };
+    Espaciamiento_cm: r6(num(ev.esp)), Densidad_siembra: r6(num(ev.dens)), Metodo: "Distancias" };
   const evaluacion = Object.assign({}, base, { Latitud: r6(ev.lat), Longitud: r6(ev.lon), Observaciones: ev.obs,
     Surcos_completos: R.nOk, Plantas_ha: r6(R.plha), Pct_logro: r6(R.logro), Dist_media: r6(R.media), Desvio: r6(R.desv), CV: r6(R.cv),
     Pct_dobles: r6(R.dob), Pct_fallas: r6(R.fal), Uniformidad: r6(R.unif), Actualizado: new Date(ev.actualizado||Date.now()).toISOString(), Version_app: VERSION });
@@ -1285,10 +1445,10 @@ function datosAmbiente(avisar){
   const l = loteActual(); if(!l || !cur.ambiente) return;
   const a = l[7] && l[7][cur.ambiente];
   if(!a){ if(avisar) toast("Ese ambiente no está en la planilla para este lote: revisá densidad y genética.",4500); return; }
-  if(a.d!=null){ cur.dens=String(Math.round(a.d*10000)); $("#iDens").value=cur.dens; }
+  if(a.d!=null){ cur.dens=densDesdeLista(a.d); $("#iDens").value=cur.dens; }
   if(a.g){ cur.genetica=a.g; $("#iGen").value=a.g; }
   cur.actualizado=Date.now(); save();
-  if(avisar) toast(`Datos de ${cur.ambiente} cargados${a.d!=null?`: ${f0(+cur.dens)} sem/ha`:""}${a.g?` · ${a.g}`:""}`);
+  if(avisar) toast(`Datos de ${cur.ambiente} cargados${a.d!=null?`: ${esML(cur)?cur.dens+" pl/m²":f0(+cur.dens)+" sem/ha"}`:""}${a.g?` · ${a.g}`:""}`);
 }
 $("#iAmb").addEventListener("change", () => datosAmbiente(true));
 
