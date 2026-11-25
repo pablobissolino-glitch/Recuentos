@@ -390,7 +390,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <script src="vosk.js"></script>
 <script>
 "use strict";
-const VERSION = "1.6.0";
+const VERSION = "1.6.1";
 const DOBLE_CM = 3, FALLA_X = 2;   // criterio de dobles y fallas
 /* Calificación de logro y CV por cultivo (criterios del equipo) */
 const CRITERIOS = { "Maíz": { logro:[95,90,85,80], cv:[20,25,30,40] }, "Girasol": { logro:[95,90,80,70], cv:[20,25,35,40] } };
@@ -405,11 +405,26 @@ const $ = s => document.querySelector(s);
 const KEY = "implantacion.v1";
 
 /* ---------------- almacenamiento ---------------- */
+/* Lotes de soja 26-27 (carga de prueba). Se suman siempre a la lista, aunque se baje la planilla.
+   Formato: [Lote, Empresa, Campo, Cultivo, Antecesor, Distancia entre hileras (cm), Densidad (semillas/m²), {}, Genética] */
+const LOTES_SOJA = [
+  ["SMta_17","C4","Santa_Margarita","Soja","Maiz",38,null,{},"dm46e25 sts"],
+  ["SMta_17","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
+  ["SMta_15","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
+  ["SMta_04_s","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
+  ["SMta_08","C4","Santa_Margarita","Soja","Maiz Silo 2da",38,41,{},"neo46s25 se"],
+  ["SMta_07","C4","Santa_Margarita","Soja","Maiz tardio",38,41,{},"neo46s25 se"],
+  ["SMta_20","C4","Santa_Margarita","Soja","Cebada Silo",38,41,{},"neo46s25 se"],
+  ["LCh_02","C4","Los_Chañares","Soja","Maiz",35,37.1,{},"dm47e23 sts"],
+  ["LCh_02","C4","Los_Chañares","Soja","Maiz",38,39.2,{},"dm47e23 sts"]
+];
 let db = { evals: [], cfg: { nPl: 15, nSur: 6, nML: 20, tec: "" }, lotes: null, lotesFecha: null };
 function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,nML:20,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("¡No se pudo guardar! Exportá los datos ahora."); } }
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
+const _k = l => [l[1],l[2],l[0],/soja|trigo|ceb/i.test(l[3]||"")?"ml":"g",l[5],l[8]||""].join("|").toLowerCase();
+let _lotesCache=null, _lotesBase=null;
+const lotes = () => { const b = db.lotes || DATA.lotes; if(b!==_lotesBase){ _lotesBase=b; const ya=new Set(b.map(_k)); _lotesCache=[...b, ...LOTES_SOJA.filter(l=>!ya.has(_k(l)))]; } return _lotesCache; };   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
 
 /* ---------------- números dictados ---------------- */
 const W = {cero:[0,"u"],un:[1,"u"],uno:[1,"u"],una:[1,"u"],dos:[2,"u"],tres:[3,"u"],cuatro:[4,"u"],cinco:[5,"u"],seis:[6,"u"],siete:[7,"u"],ocho:[8,"u"],nueve:[9,"u"],
@@ -619,7 +634,7 @@ $("#iLote").addEventListener("input", ()=>{
   const qq = q.replace(/_/g," ");
   const m = lotes().filter(l => norm(l[0]).includes(qq) || norm(l[2]).includes(qq) || norm(l[1]).includes(qq)).slice(0,12);
   if(!m.length){ S.hidden=true; return; }
-  S.innerHTML = m.map((l,i)=>`<button type="button" data-i="${lotes().indexOf(l)}"><b>${esc(l[0])}</b><span>${esc(l[2])} · ${esc(l[1])} · ${esc(l[3])}${l[5]?" · "+String(l[5]).replace(".",",")+" cm":""}</span></button>`).join("");
+  S.innerHTML = m.map((l,i)=>`<button type="button" data-i="${lotes().indexOf(l)}"><b>${esc(l[0])}</b><span>${esc(l[2])} · ${esc(l[1])} · ${esc(l[3])}${l[5]?" · "+String(l[5]).replace(".",",")+" cm":""}${l[8]?" · "+esc(l[8]):""}</span></button>`).join("");
   S.hidden=false;
   S.querySelectorAll("button").forEach(b=>b.onmousedown=b.ontouchstart=ev=>{ ev.preventDefault(); pickLote(lotes()[+b.dataset.i]); });
 });
@@ -637,7 +652,7 @@ $("#iLote").addEventListener("blur", ()=>setTimeout(()=>{ $("#sugs").hidden=true
 function pickLote(l){
   cur.lote=l[0]; cur.empresa=l[1]; cur.campo=l[2]; cur.cultivo=cultivoDe(l[3]); cur.antecesor=l[4]||cur.antecesor;
   if(l[5]) cur.esp = String(l[5]).replace(".",",");
-  if(l[6]) cur.dens = densDesdeLista(l[6]);
+  if(l[6]) cur.dens = densDesdeLista(l[6]); else if(esML(cur)) cur.dens = "";
   if(l[8]) cur.genetica = l[8];
   const ambs = l[7] ? Object.keys(l[7]) : [];
   if(ambs.length===1 && !cur.ambiente) cur.ambiente = ambs[0];
@@ -1395,7 +1410,7 @@ function lotesDeCSV(txt){
   const nEsp = n;
   const dm2 = v => { const x=n(v); return x==null?null:(x>1000? x/10000 : x); };   // sem/ha → pl/m²
   const g = (r,i) => i<0 ? "" : (r[i]||"").trim();
-  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || x.includes("maiz") || x.includes("giras"); };
+  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || /maiz|giras|soja|trigo|ceb/.test(x); };
   const por = new Map(), L = [];
   for(const r of rows.slice(1)){
     const lote=g(r,iL); if(!lote || !cultivoOk(g(r,iCu))) continue;
@@ -1409,7 +1424,7 @@ function lotesDeCSV(txt){
     const amTxt=g(r,iAm), am=ambCodigo(amTxt) || amTxt;
     if(am){ const a = l[7][am] || (l[7][am]={d:null,g:""}); if(a.d==null) a.d=d; if(!a.g) a.g=gen; }
   }
-  if(!L.length) throw new Error("no hay lotes de maíz o girasol");
+  if(!L.length) throw new Error("no hay lotes de maíz, girasol, soja, trigo o cebada");
   return L;
 }
 async function bajarLotes(manual){
@@ -1439,7 +1454,8 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 
 // densidad según el ambiente elegido (si la planilla la tiene por ambiente)
 function loteActual(){ if(!cur || !cur.lote) return null;
-  return lotes().find(l => l[0]===cur.lote && (!cur.campo || l[2]===cur.campo) && (!cur.empresa || l[1]===cur.empresa)) || null; }
+  const m = lotes().filter(l => l[0]===cur.lote && (!cur.campo || l[2]===cur.campo) && (!cur.empresa || l[1]===cur.empresa));
+  return m.find(l => esML({cultivo:cultivoDe(l[3])})===esML(cur)) || m[0] || null; }
 // al elegir ambiente: si está en la planilla para ese lote, trae su densidad y genética (después se pueden corregir)
 function datosAmbiente(avisar){
   const l = loteActual(); if(!l || !cur.ambiente) return;
