@@ -356,7 +356,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
     <p class="small">La lista se baja sola de la planilla de Google (hoja publicada como CSV) cada vez que abrís la app con señal, y queda guardada para usarla sin señal.</p>
     <label class="f">Dirección de la lista (Publicar en la web › CSV)<input id="cLotesUrl" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?…output=csv"></label>
     <div class="row"><button class="btn primary" id="btnLotes">Actualizar lista desde la planilla</button></div>
-    <p class="small muted">Sin señal o sin dirección, también podés cargar el CSV a mano (columnas: Empresa, Campo, Lote, Ambiente, Cultivo, Genética, Antecesor, Espaciamiento, Densidad).</p>
+    <p class="small muted">Sin señal o sin dirección, también podés cargar el CSV a mano (columnas: Empresa, Campo, Lote, Ambiente, Cultivo, Genética/Variedad, Antecesor, Espaciamiento, Densidad). En soja la densidad de la lista no se usa (está en kg/ha): la densidad objetivo se carga a mano.</p>
     <input type="file" id="fLotes" accept=".csv,text/csv">
   </div>
   <div class="card">
@@ -390,7 +390,7 @@ body.padon .toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
 <script src="vosk.js"></script>
 <script>
 "use strict";
-const VERSION = "1.6.1";
+const VERSION = "1.7.1";
 const DOBLE_CM = 3, FALLA_X = 2;   // criterio de dobles y fallas
 /* Calificación de logro y CV por cultivo (criterios del equipo) */
 const CRITERIOS = { "Maíz": { logro:[95,90,85,80], cv:[20,25,30,40] }, "Girasol": { logro:[95,90,80,70], cv:[20,25,35,40] } };
@@ -405,26 +405,11 @@ const $ = s => document.querySelector(s);
 const KEY = "implantacion.v1";
 
 /* ---------------- almacenamiento ---------------- */
-/* Lotes de soja 26-27 (carga de prueba). Se suman siempre a la lista, aunque se baje la planilla.
-   Formato: [Lote, Empresa, Campo, Cultivo, Antecesor, Distancia entre hileras (cm), Densidad (semillas/m²), {}, Genética] */
-const LOTES_SOJA = [
-  ["SMta_17","C4","Santa_Margarita","Soja","Maiz",38,null,{},"dm46e25 sts"],
-  ["SMta_17","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
-  ["SMta_15","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
-  ["SMta_04_s","C4","Santa_Margarita","Soja","Maiz",38,37.1,{},"dm47e23 sts"],
-  ["SMta_08","C4","Santa_Margarita","Soja","Maiz Silo 2da",38,41,{},"neo46s25 se"],
-  ["SMta_07","C4","Santa_Margarita","Soja","Maiz tardio",38,41,{},"neo46s25 se"],
-  ["SMta_20","C4","Santa_Margarita","Soja","Cebada Silo",38,41,{},"neo46s25 se"],
-  ["LCh_02","C4","Los_Chañares","Soja","Maiz",35,37.1,{},"dm47e23 sts"],
-  ["LCh_02","C4","Los_Chañares","Soja","Maiz",38,39.2,{},"dm47e23 sts"]
-];
 let db = { evals: [], cfg: { nPl: 15, nSur: 6, nML: 20, tec: "" }, lotes: null, lotesFecha: null };
 function load(){ try{ const t = localStorage.getItem(KEY); if(t){ const o = JSON.parse(t); db = Object.assign(db, o); db.cfg = Object.assign({nPl:15,nSur:6,nML:20,tec:""}, o.cfg||{}); } }catch(e){ toast("No se pudo leer lo guardado en el celular"); } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("¡No se pudo guardar! Exportá los datos ahora."); } }
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-const _k = l => [l[1],l[2],l[0],/soja|trigo|ceb/i.test(l[3]||"")?"ml":"g",l[5],l[8]||""].join("|").toLowerCase();
-let _lotesCache=null, _lotesBase=null;
-const lotes = () => { const b = db.lotes || DATA.lotes; if(b!==_lotesBase){ _lotesBase=b; const ya=new Set(b.map(_k)); _lotesCache=[...b, ...LOTES_SOJA.filter(l=>!ya.has(_k(l)))]; } return _lotesCache; };   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
+const lotes = () => db.lotes || DATA.lotes;   // [Lote, Empresa, Campo, Cultivo, Antecesor, Esp, Dens m2, {ambiente:{d,g}}, Genética]
 
 /* ---------------- números dictados ---------------- */
 const W = {cero:[0,"u"],un:[1,"u"],uno:[1,"u"],una:[1,"u"],dos:[2,"u"],tres:[3,"u"],cuatro:[4,"u"],cinco:[5,"u"],seis:[6,"u"],siete:[7,"u"],ocho:[8,"u"],nueve:[9,"u"],
@@ -1410,15 +1395,17 @@ function lotesDeCSV(txt){
   const nEsp = n;
   const dm2 = v => { const x=n(v); return x==null?null:(x>1000? x/10000 : x); };   // sem/ha → pl/m²
   const g = (r,i) => i<0 ? "" : (r[i]||"").trim();
-  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || /maiz|giras|soja|trigo|ceb/.test(x); };
+  const cultivoOk = c => { const x=c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return !x || x.includes("maiz") || x.includes("giras") || /soja|trigo|ceb/.test(x); };
   const por = new Map(), L = [];
   for(const r of rows.slice(1)){
     const lote=g(r,iL); if(!lote || !cultivoOk(g(r,iCu))) continue;
-    const key=[g(r,iE),g(r,iC),lote].join("|").toLowerCase();
+    const ml=/soja|trigo|ceb/i.test(g(r,iCu));
+    // maíz y soja del mismo lote van separados; en soja/fina sin ambiente, cada genética o distancia entre hileras es una entrada aparte
+    const key=[g(r,iE),g(r,iC),lote,ml?"ml":"d", ml&&!g(r,iAm) ? g(r,iG)+"|"+(nEsp(g(r,iEs))||"") : ""].join("|").toLowerCase();
     let l = por.get(key);
     if(!l){ l=[lote, g(r,iE), g(r,iC), g(r,iCu), g(r,iA), null, null, {}, ""]; por.set(key,l); L.push(l); }
     if(l[5]==null) l[5]=nEsp(g(r,iEs));
-    const d=dm2(g(r,iD)), gen=g(r,iG);
+    const d=ml ? null : dm2(g(r,iD)), gen=g(r,iG);   // en soja la planilla tiene kg/ha: no se usa, la densidad objetivo se carga a mano
     if(l[6]==null && d!=null) l[6]=d;
     if(!l[8] && gen) l[8]=gen;
     const amTxt=g(r,iAm), am=ambCodigo(amTxt) || amTxt;
