@@ -234,7 +234,7 @@ table.sur{border-collapse:collapse;width:100%;font-size:12.5px}
         <tr><td></td><td>Muy buena</td><td>Buena</td><td>Regular</td></tr>
         <tr><td>≥ (%)</td><td><input id="c_un0"></td><td><input id="c_un1"></td><td><input id="c_un2"></td></tr>
       </table>
-      <p>Por debajo del último valor: deficiente. Se guarda en esta computadora.</p>
+      <p>Singulación: por debajo del último valor, deficiente. Los valores editables se guardan en esta computadora.</p>
     </details>
     <details class="crit"><summary>Dirección de la planilla</summary>
       <p>Viene configurada. Cambiala solo si la planilla tiene una dirección nueva.</p>
@@ -279,7 +279,10 @@ const CRITERIOS = {
   "Girasol": { logro:[95,90,80,70], cv:[20,25,35,40] }
 };
 const NIV = ["Excelente","Muy bueno","Bueno","Regular","Deficiente"];
-const critDe = c => CRITERIOS[c==="Girasol" ? "Girasol" : "Maíz"];
+/* Soja, trigo y cebada (metro lineal): valores provisorios y editables hasta que el equipo los defina. Se guardan en esta computadora. */
+const CRIT_ML_DEF = { "Soja": { logro:[95,90,80,70], cv:[10,15,20,30] }, "Trigo y cebada": { logro:[95,90,80,70], cv:[10,15,20,30] } };
+const CRIT_ML = (()=>{ const g=store.get("tablero.critML",{}), o={}; for(const k in CRIT_ML_DEF) o[k] = { logro:(g[k]&&g[k].logro)||CRIT_ML_DEF[k].logro.slice(), cv:(g[k]&&g[k].cv)||CRIT_ML_DEF[k].cv.slice() }; return o; })();
+const critDe = c => /soja/i.test(c||"") ? CRIT_ML["Soja"] : /trigo|ceb/i.test(c||"") ? CRIT_ML["Trigo y cebada"] : CRITERIOS[c==="Girasol" ? "Girasol" : "Maíz"];
 // Logro: > t0 excelente · ≥ t1 muy bueno · ≥ t2 bueno · ≥ t3 regular · menos, deficiente
 const rateLogro = (v,c) => { if(v==null) return null; const t=critDe(c).logro, x=v*100; return x>t[0]?0 : x>=t[1]?1 : x>=t[2]?2 : x>=t[3]?3 : 4; };
 // CV: < t0 excelente · ≤ t1 muy bueno · ≤ t2 bueno · ≤ t3 regular · más, deficiente
@@ -296,7 +299,14 @@ function critUI(){
     el.onchange=()=>{ const v=parseFloat(el.value.replace(",",".")); if(isFinite(v)){ CRIT.un=CRIT.un.slice(); CRIT.un[i]=v; store.set("tablero.critUn",CRIT.un); render(); } }; });
   $("#critTabla").innerHTML = Object.entries(CRITERIOS).map(([c,k])=>`<table><tr><th colspan="2">${c}</th></tr>
     <tr><td class="k">Logro</td><td>&gt;${k.logro[0]} exc · ${k.logro[1]}–${k.logro[0]} MB · ${k.logro[2]}–${k.logro[1]} B · ${k.logro[3]}–${k.logro[2]} R · &lt;${k.logro[3]} D</td></tr>
-    <tr><td class="k">CV</td><td>&lt;${k.cv[0]} exc · ${k.cv[0]}–${k.cv[1]} MB · ${k.cv[1]}–${k.cv[2]} B · ${k.cv[2]}–${k.cv[3]} R · &gt;${k.cv[3]} D</td></tr></table>`).join("");
+    <tr><td class="k">CV</td><td>&lt;${k.cv[0]} exc · ${k.cv[0]}–${k.cv[1]} MB · ${k.cv[1]}–${k.cv[2]} B · ${k.cv[2]}–${k.cv[3]} R · &gt;${k.cv[3]} D</td></tr></table>`).join("")
+    + `<p style="margin:10px 0 0;font-weight:700">Soja, trigo y cebada (provisorio, editable)</p>`
+    + Object.entries(CRIT_ML).map(([c,k],j)=>`<table><tr><th>${c}</th><th>Exc.</th><th>MB</th><th>B</th><th>R</th></tr>
+      <tr><td class="k">Logro &gt;/≥</td>${k.logro.map((v,i)=>`<td><input data-ml="${j}" data-t="logro" data-i="${i}" value="${v}"></td>`).join("")}</tr>
+      <tr><td class="k">CV &lt;/≤</td>${k.cv.map((v,i)=>`<td><input data-ml="${j}" data-t="cv" data-i="${i}" value="${v}"></td>`).join("")}</tr></table>`).join("");
+  $("#critTabla").querySelectorAll("input[data-ml]").forEach(el=>el.onchange=()=>{
+    const v=parseFloat(el.value.replace(",",".")); if(!isFinite(v)) return;
+    const k=Object.keys(CRIT_ML)[+el.dataset.ml]; CRIT_ML[k][el.dataset.t][+el.dataset.i]=v; store.set("tablero.critML",CRIT_ML); render(); });
 }
 
 /* ---------- formato ---------- */
@@ -306,7 +316,7 @@ const fp = (v,d=1) => v==null||!isFinite(v) ? "—" : (v*100).toLocaleString("es
 const fd = s => { const m=String(s||"").match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[3]}/${m[2]}/${m[1]}`:String(s||""); };
 const nice = s => String(s||"").replace(/_/g," ");
 const numv = v => { if(v===""||v==null) return null; const x = typeof v==="number" ? v : parseFloat(String(v).replace(",",".")); return isFinite(x)?x:null; };
-const grupo = c => { const x=String(c||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return x.startsWith("giras")?"Girasol":x.startsWith("maiz")?"Maíz":(c||"Sin cultivo"); };
+const grupo = c => { const x=String(c||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); return x.startsWith("giras")?"Girasol":x.startsWith("maiz")?"Maíz":x.startsWith("soja")?(/2|seg/.test(x)?"Soja 2da":"Soja"):x.startsWith("trigo")?"Trigo":x.startsWith("ceb")?"Cebada":(c||"Sin cultivo"); };
 
 /* ---------- cálculos (los mismos de la app y de la planilla) ---------- */
 function calcSurco(vals, esp, dens){
@@ -422,7 +432,7 @@ async function cargar(clave){
   try{
     const j = await pedirDatos(clave);
     guardarClave(clave);
-    TODO = armar(j.evaluaciones, j.surcos||[]);
+    TODO = [...armar(j.evaluaciones, j.surcos||[]), ...armarML(j.evaluaciones)];
     $("#st").textContent = `${TODO.length} evaluaciones · ${new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})}`;
     $("#btnReload").hidden = false; $("#btnSalir").hidden = false;
     empresas();
@@ -616,6 +626,238 @@ function porSembradora(rows){
     </tbody></table></div></div>`;
 }
 
+/* ---------- soja, trigo y cebada: recuento de plantas por metro lineal ----------
+   Cada evaluación trae M01…M20 (plantas en 1 m de hilera). Plantas/m² = pl/m ÷ (distancia entre hileras en m).
+   CV entre metros = desvío de las pl/m² de cada metro ÷ promedio. Logro = pl/m² ÷ densidad objetivo (si se cargó). */
+const sdv = a => { if(a.length<2) return null; const m=a.reduce((p,x)=>p+x,0)/a.length; return Math.sqrt(a.reduce((p,x)=>p+(x-m)*(x-m),0)/(a.length-1)); };
+function armarML(evs){
+  const nrm = s => String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();
+  const dia = f => { const m=String(f||"").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Date.UTC(+m[1],+m[2]-1,+m[3])/864e5 : null; };
+  const L = evs.filter(e => e.ID_Evaluacion && esMetroLineal(e));
+  let grupos;
+  if(store.get("tablero.unir", true)){
+    const claves = {};
+    L.forEach(e => { const k=[nrm(e.Empresa),nrm(e.Campania),nrm(grupo(e.Cultivo)),nrm(e.Campo),nrm(e.Lote),nrm(e.Ambiente)].join("|"); (claves[k]=claves[k]||[]).push(e); });
+    grupos = [];
+    for(const lista of Object.values(claves)){
+      lista.sort((a,b)=>String(a.Fecha).localeCompare(String(b.Fecha)));
+      let g = null;
+      for(const e of lista){ const d=dia(e.Fecha);
+        if(g && d!=null && g.d0!=null && d-g.d0<=DIAS_UNIR) g.evs.push(e); else { g={d0:d, evs:[e]}; grupos.push(g); } }
+    }
+  } else grupos = L.map(e => ({ evs:[e] }));
+  return grupos.map(g => {
+    const e = Object.assign({}, g.evs[0]);
+    const uniq = k => [...new Set(g.evs.map(x=>String(x[k]??"").trim()).filter(Boolean))];
+    if(g.evs.length > 1){
+      ["Tecnico","Contratista","Sembradora","Genetica","Estado_fenologico","Antecesor"].forEach(k=>{ e[k] = uniq(k).join(" / "); });
+      e.Observaciones = g.evs.filter(x=>String(x.Observaciones||"").trim()).map(x=>(x.Tecnico?String(x.Tecnico).trim()+": ":"")+String(x.Observaciones).trim()).join(" · ");
+    }
+    const ms = [];
+    g.evs.forEach(x => { const esp=numv(x.Espaciamiento_cm), dens=numv(x.Densidad_objetivo_pl_m2), tec=String(x.Tecnico||"").trim();
+      for(let k=1;k<=60;k++){ const v=numv(x["M"+String(k).padStart(2,"0")]); if(v!=null) ms.push({ v, esp, dens, tec, m2: esp>0 ? v/(esp/100) : null }); } });
+    const v = ms.map(m=>m.v), m2 = ms.map(m=>m.m2).filter(x=>x!=null);
+    const lo = ms.filter(m=>m.m2!=null && m.dens>0).map(m=>m.m2/m.dens);
+    const R = { ml:true, e, ms, n: ms.length, esp: numv(e.Espaciamiento_cm), dens: mean(g.evs.map(x=>numv(x.Densidad_objetivo_pl_m2)).filter(x=>x>0)),
+      prom: mean(v), desv: sdv(v), plm2: mean(m2), desvm2: sdv(m2), logro: mean(lo),
+      min: v.length?Math.min(...v):null, max: v.length?Math.max(...v):null,
+      nRec: g.evs.length, distintos: uniq("Espaciamiento_cm").length>1 || uniq("Densidad_objetivo_pl_m2").length>1 };
+    R.cv = R.desvm2!=null && R.plm2>0 ? R.desvm2/R.plm2 : null;
+    R.empresa = String(e.Empresa||"Sin empresa"); R.camp = String(e.Campania||""); R.cult = grupo(e.Cultivo);
+    R.id = "l-" + String(e.ID_Evaluacion).replace(/[^\w-]/g,"");
+    return R;
+  }).filter(R => R.n);
+}
+
+function barsPlm2(rows){   // pl/m² por lote/ambiente con desvío y densidad objetivo
+  const rr = rows.filter(R=>R.plm2!=null); if(!rr.length) return "";
+  const W=520, rowH=20, m={l:150,r:56,t:8,b:26}, H=m.t+m.b+rr.length*rowH;
+  const max = Math.max(...rr.map(R=>Math.max(R.plm2+(R.desvm2||0), R.dens||0)))*1.08;
+  const X = v => m.l + Math.max(0,v)/max*(W-m.l-m.r);
+  const step = max>300?50 : max>120?20 : max>50?10 : 5;
+  let g = "";
+  for(let v=0; v<=max; v+=step){ g += `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--line-2)"/><text x="${X(v)}" y="${H-m.b+15}" font-size="10.5" text-anchor="middle" fill="var(--muted)">${v}</text>`; }
+  rr.forEach((R,i)=>{ const y = m.t + i*rowH;
+    const tip = `<b>${esc(nice(R.e.Lote))} · ${esc(R.e.Ambiente||"lote")}</b><br>${f1(R.plm2)} pl/m² (± ${f1(R.desvm2)})${R.dens?`<br>Objetivo ${f1(R.dens)} pl/m² · Logro ${fp(R.logro)}`:""}`;
+    g += `<text x="${m.l-8}" y="${y+14}" font-size="11" text-anchor="end" fill="var(--ink-2)">${esc(nice(R.e.Lote))} <tspan font-weight="700">${esc(R.e.Ambiente||"")}</tspan></text>`;
+    g += `<rect x="${m.l}" y="${y+4}" width="${X(R.plm2)-m.l}" height="12" rx="3" fill="var(--brand)" data-tip="${esc(tip)}" data-go="${R.id}" style="cursor:pointer"/>`;
+    if(R.desvm2!=null) g += `<line x1="${X(R.plm2-R.desvm2)}" x2="${X(R.plm2+R.desvm2)}" y1="${y+10}" y2="${y+10}" stroke="var(--brand-dark)" stroke-width="1.5" pointer-events="none"/><line x1="${X(R.plm2+R.desvm2)}" x2="${X(R.plm2+R.desvm2)}" y1="${y+6}" y2="${y+14}" stroke="var(--brand-dark)" stroke-width="1.5" pointer-events="none"/>`;
+    if(R.dens) g += `<rect x="${X(R.dens)-1.25}" y="${y+1}" width="2.5" height="18" rx="1" fill="var(--ink)" pointer-events="none"/>`;
+    g += `<text x="${Math.max(X(R.plm2+(R.desvm2||0)),X(R.dens||0))+6}" y="${y+14}" font-size="10.5" fill="var(--ink-2)">${R.logro!=null?fp(R.logro,0):f1(R.plm2)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plantas por metro cuadrado por lote">${g}</svg>`;
+}
+function barsCV(rows){   // CV entre metros, coloreado según el criterio
+  const rr = rows.filter(R=>R.cv!=null); if(!rr.length) return "";
+  const cult = rr[0].cult, t = critDe(cult).cv;
+  const W=520, rowH=20, m={l:150,r:44,t:8,b:26}, H=m.t+m.b+rr.length*rowH;
+  const max = Math.max(t[3]/100*1.15, ...rr.map(R=>R.cv))*1.06;
+  const X = v => m.l + v/max*(W-m.l-m.r);
+  let g = "";
+  for(let v=0; v<=max+1e-9; v+=(max>0.6?0.2:0.1)){ g += `<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--line-2)"/><text x="${X(v)}" y="${H-m.b+15}" font-size="10.5" text-anchor="middle" fill="var(--muted)">${Math.round(v*100)}%</text>`; }
+  t.forEach(x=>{ g += `<line x1="${X(x/100)}" x2="${X(x/100)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--muted)" stroke-dasharray="3 3" opacity=".6"/>`; });
+  rr.forEach((R,i)=>{ const y = m.t + i*rowH, r = rateCV(R.cv, R.cult);
+    g += `<text x="${m.l-8}" y="${y+14}" font-size="11" text-anchor="end" fill="var(--ink-2)">${esc(nice(R.e.Lote))} <tspan font-weight="700">${esc(R.e.Ambiente||"")}</tspan></text>`;
+    g += `<rect x="${m.l}" y="${y+4}" width="${Math.max(1,X(R.cv)-m.l)}" height="12" rx="3" fill="var(--r${r})" data-tip="${esc(`<b>${esc(nice(R.e.Lote))}</b><br>CV ${fp(R.cv)} · ${NIV[r]}`)}" data-go="${R.id}" style="cursor:pointer"/>`;
+    g += `<text x="${X(R.cv)+6}" y="${y+14}" font-size="10.5" fill="var(--ink-2)">${fp(R.cv,0)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Coeficiente de variación entre metros por lote">${g}</svg>`;
+}
+function metrosSVG(R){   // plantas/m² de cada metro contado, con promedio ± desvío y objetivo
+  const ms = R.ms.filter(m=>m.m2!=null); if(!ms.length) return "";
+  const W=640, H=190, m={l:36,r:70,t:12,b:26};
+  const max = Math.max(...ms.map(x=>x.m2), R.dens||0, R.plm2+(R.desvm2||0))*1.1;
+  const bw = (W-m.l-m.r)/ms.length;
+  const Y = v => H-m.b - v/max*(H-m.t-m.b);
+  const step = max>300?50 : max>120?20 : max>50?10 : 5;
+  let g = "";
+  for(let v=0; v<=max; v+=step){ g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-2)"/><text x="${m.l-5}" y="${Y(v)+3.5}" font-size="10" text-anchor="end" fill="var(--muted)">${v}</text>`; }
+  if(R.desvm2!=null) g += `<rect x="${m.l}" y="${Y(R.plm2+R.desvm2)}" width="${W-m.l-m.r}" height="${Y(Math.max(0,R.plm2-R.desvm2))-Y(R.plm2+R.desvm2)}" fill="var(--brand-tint)"/>`;
+  ms.forEach((x,i)=>{ const x0 = m.l + i*bw;
+    g += `<rect x="${x0+bw*0.15}" y="${Y(x.m2)}" width="${bw*0.7}" height="${Y(0)-Y(x.m2)}" rx="2" fill="var(--brand)" data-tip="Metro ${i+1}: ${f0(x.v)} pl/m · ${f1(x.m2)} pl/m²${R.nRec>1&&x.tec?" · "+esc(x.tec):""}"/>`;
+    if(ms.length<=30 || i%2===0) g += `<text x="${x0+bw/2}" y="${H-m.b+14}" font-size="9.5" text-anchor="middle" fill="var(--muted)">${i+1}</text>`; });
+  g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(R.plm2)}" y2="${Y(R.plm2)}" stroke="var(--brand-dark)" stroke-width="1.5"/>`;
+  g += `<text x="${W-m.r+6}" y="${Y(R.plm2)+4}" font-size="10" font-weight="700" fill="var(--brand-dark)">prom. ${f1(R.plm2)}</text>`;
+  if(R.dens){ g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(R.dens)}" y2="${Y(R.dens)}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    g += `<text x="${W-m.r+6}" y="${Y(R.dens)+(Math.abs(Y(R.dens)-Y(R.plm2))<12?(R.dens>R.plm2?-6:14):4)}" font-size="10" font-weight="700" fill="var(--ink)">obj. ${f1(R.dens)}</text>`; }
+  g += `<text x="${W-m.r}" y="${H-2}" font-size="9.5" text-anchor="end" fill="var(--muted)">metro contado</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plantas por metro cuadrado en cada metro contado">${g}</svg>`;
+}
+function porSembradoraML(rows){
+  const key = R => String(R.e.Sembradora||"").trim();
+  const g = new Map();
+  rows.forEach(R=>{ const k = key(R).toLowerCase() || "\u0000"; if(!g.has(k)) g.set(k, { nombre: key(R) || "Sin dato de sembradora", rs: [] }); g.get(k).rs.push(R); });
+  const grupos = [...g.values()];
+  if(grupos.length < 2){
+    const G = grupos[0]; if(!G || !key(G.rs[0])) return "";
+    const contr = [...new Set(G.rs.map(R=>String(R.e.Contratista||"").trim()).filter(Boolean))];
+    return `<p class="semuna">Sembradora: <b>${esc(G.nombre)}</b>${contr.length?` · Contratista: <b>${esc(contr.join(", "))}</b>`:""}</p>`;
+  }
+  grupos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const cult = rows[0].cult;
+  return `<div><div class="sec-h" style="margin:4px 0 6px"><h3 style="font-size:19px">Por sembradora</h3><p>Promedio de los lotes y ambientes sembrados con cada máquina</p></div>
+    <div class="tw"><table class="sem"><thead><tr><th>Sembradora</th><th class="n">Lotes / amb.</th><th class="n">Plantas/m²</th><th>Logro</th><th>CV entre metros</th></tr></thead><tbody>
+    ${grupos.map(G=>{ const rs=G.rs, pl=mean(rs.map(R=>R.plm2)), lo=mean(rs.map(R=>R.logro)), cv=mean(rs.map(R=>R.cv));
+      const contr = [...new Set(rs.map(R=>String(R.e.Contratista||"").trim()).filter(Boolean))];
+      return `<tr><td class="nm">${esc(G.nombre)}${contr.length?`<small>${esc(contr.join(", "))}</small>`:""}</td><td class="n">${rs.length}</td>
+        <td class="n"><span class="val">${f1(pl)}</span></td>
+        <td>${lo!=null?`<span class="val">${fp(lo)}</span>${chip(rateLogro(lo,cult))}`:"—"}</td><td><span class="val">${fp(cv)}</span>${chip(rateCV(cv,cult))}</td></tr>`; }).join("")}
+    </tbody></table></div></div>`;
+}
+
+function renderML(rows){
+  const camp = $("#fCamp").value, cult = $("#fCult").value, campo = $("#fCampo").value;
+  const fechas = rows.map(R=>String(R.e.Fecha||"")).filter(Boolean).sort();
+  const rango = fechas.length ? fd(fechas[0])+(fechas.length>1&&fechas[0]!==fechas[fechas.length-1]?" al "+fd(fechas[fechas.length-1]):"") : "";
+  const K = { plm2: mean(rows.map(R=>R.plm2)), prom: mean(rows.map(R=>R.prom)), desvm2: mean(rows.map(R=>R.desvm2)), logro: mean(rows.map(R=>R.logro)), cv: mean(rows.map(R=>R.cv)) };
+  const rLo = rateLogro(K.logro, cult), rCV = rateCV(K.cv, cult);
+  const nConObj = rows.filter(R=>R.logro!=null).length;
+  const nBuenCV = rows.filter(R=>{ const r=rateCV(R.cv,R.cult); return r!=null && r<=2; }).length;
+  const campos = [...new Set(rows.map(R=>nice(R.e.Campo)))];
+  const vars = [...new Set(rows.map(R=>R.e.Genetica).filter(Boolean))];
+  const bajo = rows.length>1 ? rows.filter(R=>R.plm2!=null).sort((a,b)=>a.plm2-b.plm2)[0] : null;
+  const peor = rows.filter(R=>R.cv!=null).sort((a,b)=>b.cv-a.cv)[0];
+  const titulo = nice(emp), sub = `${cult} · campaña ${camp}${campo?` · ${nice(campo)}`:""}`;
+  const logo = document.querySelector(".top img").src;
+  document.documentElement.style.setProperty("--pie", `"SOS Agro · Implantación ${cult} ${camp} · ${nice(emp).replace(/"/g,"")}"`);
+  const nMet = Math.round(mean(rows.map(R=>R.n/R.nRec))||0);
+
+  $("#cover").innerHTML = `
+    <div class="cv-top"><img src="${logo}" alt="SOS Agro"><div style="text-align:right;font-size:10pt;color:var(--ink-2)">Informe emitido el<br><b>${new Date().toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"})}</b></div></div>
+    <div class="cv-band"><div class="k">Calidad de implantación</div><h1>Plantas logradas por metro lineal y uniformidad del stand</h1></div>
+    <div class="cv-emp"><div class="k">Empresa</div><div class="e">${esc(titulo)}</div><div class="s">${esc(sub)}</div>
+      <div class="s" style="font-size:11pt;margin-top:5mm">${rows.length} ${rows.length===1?"evaluación":"evaluaciones"} en ${campos.length} ${campos.length===1?"campo":"campos"} (${esc(campos.join(", "))}) · ${rango}</div></div>
+    <div class="cv-tape"></div>
+    <div class="cv-foot"><span><b>SOS Agro</b> · Gdor. Irigoyen 283 · Trenque Lauquen</span><span>TE 02392-412732</span></div>`;
+
+  const maxP = Math.max(...rows.map(R=>Math.max(R.plm2||0, R.dens||0)))*1.04;
+  const maxCV = Math.max(critDe(cult).cv[3]/100*1.15, ...rows.map(R=>R.cv||0))*1.05;
+  const ckey = `tablero.com:${emp}|${camp}|${cult}|${campo}`, com = store.get(ckey, "");
+  const barP = R => { const W=110, H=18, x=v=>Math.max(0,Math.min(W,v/maxP*W));
+    return `<svg class="bar" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect x="0" y="4" width="${W}" height="10" rx="3" fill="var(--line-2)"/>${R.plm2!=null?`<rect x="0" y="4" width="${x(R.plm2)}" height="10" rx="3" fill="var(--brand)"/>`:""}${R.dens?`<rect x="${x(R.dens)-1}" y="0" width="2.5" height="${H}" rx="1" fill="var(--ink)"/>`:""}</svg>`; };
+
+  $("#summary").innerHTML = `<div class="pg">
+  <section class="card" style="display:flex;flex-direction:column;gap:16px">
+    <div class="ehead"><div><div class="eyebrow">Implantación · ${esc(cult)} ${esc(camp)}</div><h2>${esc(titulo)}</h2>
+      <div class="sub">${esc(campo?nice(campo):campos.join(" · "))} · ${rows.length} ${rows.length===1?"lote/ambiente":"lotes y ambientes"} · ${rango}</div></div>
+      <div class="legend noprint"><span>Tocá un lote para ver su detalle</span></div></div>
+    <p class="lead">Se lograron en promedio <b>${f1(K.plm2)} plantas/m²</b> (${f1(K.prom)} por metro lineal)${K.logro!=null?`, un logro de <b>${fp(K.logro)}</b>${rLo!=null?` (${NIV[rLo].toLowerCase()})`:""} sobre la densidad objetivo${nConObj<rows.length?` (en ${nConObj} de ${rows.length} con objetivo cargado)`:""}`:""}.
+      La uniformidad entre metros fue de <b>${fp(K.cv)}</b> de CV${rCV!=null?` (${NIV[rCV].toLowerCase()})`:""}: ${nBuenCV} de ${rows.filter(R=>R.cv!=null).length} con CV bueno o mejor.
+      ${bajo ? `El menor stand se dio en <b>${esc(nice(bajo.e.Lote))} ${esc(bajo.e.Ambiente||"")}</b> (${f1(bajo.plm2)} pl/m²).` : ""}
+      ${peor && rows.length>1 && rateCV(peor.cv,peor.cult)>=3 ? `La mayor desuniformidad se dio en <b>${esc(nice(peor.e.Lote))} ${esc(peor.e.Ambiente||"")}</b> (CV ${fp(peor.cv,0)}).` : ""}
+      ${vars.length?`Variedades: ${esc(vars.join(", "))}.`:""}</p>
+    <div class="kpis">
+      <div class="kpi"><span class="l">Plantas por m²</span><span class="v">${f1(K.plm2)}<small>pl/m²</small></span><span class="d">${f1(K.prom)} plantas por metro lineal</span></div>
+      <div class="kpi"><span class="l">Logro</span><span class="v">${fp(K.logro)}</span><span class="d">${K.logro!=null?chip(rLo):"sin densidad objetivo cargada"}</span></div>
+      <div class="kpi"><span class="l">CV entre metros</span><span class="v">${fp(K.cv)}</span><span class="d">${chip(rCV)} · desvío ${f1(K.desvm2)} pl/m²</span></div>
+    </div>
+    <p class="defs"><b>Recuento:</b> plantas en 1 metro de hilera, contadas en ${nMet||20} lugares de cada lote o ambiente. <b>Plantas/m²:</b> plantas por metro lineal ÷ distancia entre hileras (en metros). <b>CV entre metros:</b> desvío estándar de las plantas/m² de cada metro dividido por el promedio; cuanto menor, más parejo el stand. <b>Logro:</b> plantas/m² ÷ densidad objetivo.</p>
+    ${porSembradoraML(rows)}
+    <div class="comment ${com?"":"vacio"}"><label class="fld noprint" for="com">Comentarios del asesor (salen en el PDF)</label>
+      <textarea id="com" placeholder="Conclusiones y recomendaciones para la empresa…">${esc(com)}</textarea>
+      <div class="sec-h" style="margin:6px 0 4px"><h3 style="font-size:15pt">Comentarios</h3></div><div class="print-text" id="comP">${esc(com)}</div></div>
+  </section>
+
+  <section class="card charts" style="margin-top:22px">
+    <div class="fig"><div class="sec-h" style="margin:0"><h3>Plantas logradas</h3></div><p style="margin:0;font-size:12.5px;color:var(--muted)">Barras: plantas/m², con la línea de ± 1 desvío entre metros. Marca negra: densidad objetivo. A la derecha, % de logro (o pl/m² si no hay objetivo).</p>${barsPlm2(rows)}</div>
+    <div class="fig"><div class="sec-h" style="margin:0"><h3>Uniformidad entre metros</h3></div><p style="margin:0;font-size:12.5px;color:var(--muted)">CV de cada lote o ambiente; el color es su calificación. Líneas punteadas: límites de los criterios (${critDe(cult).cv.join(" · ")}%).</p>${barsCV(rows)}</div>
+  </section>
+  </div><div class="pg">
+  <section class="card" style="margin-top:22px">
+    <div class="sec-h"><h3>Resumen por lote y ambiente</h3>
+      <div class="legend"><span><i style="background:var(--brand)"></i>Plantas/m²</span><span><i style="background:var(--ink);width:3px"></i>Densidad objetivo</span></div></div>
+    <div class="tw"><table class="ov">
+      <thead><tr><th class="n">N°</th><th>Lote · ambiente</th><th>Fecha</th><th>EF</th><th>Variedad</th><th class="n">Hileras</th><th class="n">Objetivo</th><th>Plantas/m²</th><th class="n">pl/m lineal</th><th class="n">Logro</th><th>CV</th><th class="n">Metros</th></tr></thead>
+      <tbody>${rows.map((R,i)=>`<tr class="row" data-go="${R.id}">
+        <td class="n" style="color:var(--muted);font-weight:700">${i+1}</td><td class="lt">${esc(nice(R.e.Lote))} · ${esc(R.e.Ambiente||"lote")}<small>${esc(nice(R.e.Campo))}</small></td>
+        <td>${fd(R.e.Fecha)}</td><td>${esc(R.e.Estado_fenologico||"")}</td><td>${esc(R.e.Genetica||"—")}</td>
+        <td class="n">${R.esp?f1(R.esp).replace(",0","")+" cm":"—"}</td><td class="n">${R.dens?f1(R.dens):"—"}</td>
+        <td><div style="display:flex;align-items:center;gap:8px">${barP(R)}<b>${f1(R.plm2)}</b></div></td>
+        <td class="n">${f1(R.prom)}</td>
+        <td class="n">${R.logro!=null?chip(rateLogro(R.logro,R.cult)).replace(/<\/i>.*<\/span>/, `</i>${fp(R.logro,0)}</span>`):"—"}</td>
+        <td><div style="display:flex;align-items:center;gap:8px">${barCV(R,maxCV)}<b>${fp(R.cv,0)}</b></div></td>
+        <td class="n">${R.n}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><td></td><td>Promedio</td><td></td><td></td><td></td><td></td><td></td><td>${f1(K.plm2)}</td><td class="n">${f1(K.prom)}</td><td class="n">${fp(K.logro)}</td><td>${fp(K.cv,0)}</td><td></td></tr></tfoot>
+    </table></div>
+    <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Criterios para ${esc(cult.toLowerCase())} — ${critTexto(cult).replace("CV:","CV entre metros:")}</p>
+  </section></div>`;
+
+  $("#com").addEventListener("input", e=>{ store.set(ckey, e.target.value); $("#comP").textContent = e.target.value; e.target.closest(".comment").classList.toggle("vacio", !e.target.value.trim()); });
+
+  $("#lotes").innerHTML = rows.map(R=>{
+    const e=R.e, rc=rateCV(R.cv,R.cult), rl=rateLogro(R.logro,R.cult);
+    const gps = numv(e.Latitud)!=null && numv(e.Longitud)!=null ? `<a href="https://www.google.com/maps?q=${numv(e.Latitud)},${numv(e.Longitud)}" target="_blank" rel="noopener">${numv(e.Latitud).toFixed(5)}, ${numv(e.Longitud).toFixed(5)}</a>` : "";
+    const kv = [["Campo",nice(e.Campo)],["Fecha",fd(e.Fecha)],["Estado fenológico",e.Estado_fenologico],["Variedad",e.Genetica],["Antecesor",e.Antecesor],
+      ["Entre hileras",R.esp?f1(R.esp).replace(",0","")+" cm":""],["Densidad objetivo",R.dens?f1(R.dens)+" pl/m²":""],["Contratista",e.Contratista],["Sembradora",e.Sembradora],["Técnico",e.Tecnico],["GPS",gps]].filter(x=>x[1]);
+    const filas = []; for(let i=0;i<R.ms.length;i+=10) filas.push(R.ms.slice(i,i+10));
+    return `<article class="lote" id="${R.id}">
+      <div class="h"><div><h4>${esc(nice(e.Lote))}<small>${esc(e.Ambiente?"ambiente "+e.Ambiente:"lote completo")}</small></h4>
+        <div class="meta">${esc(nice(e.Campo))} · ${fd(e.Fecha)}${e.Estado_fenologico?" · "+esc(e.Estado_fenologico):""} · ${R.n} metros contados${R.nRec>1?` · <b>une ${R.nRec} recuentos</b> (${esc(e.Tecnico||"")})`:""}</div>
+        ${R.distintos?`<div class="meta" style="color:var(--r3);font-weight:600">Atención: los recuentos unidos tienen distinta distancia entre hileras o densidad objetivo; cada metro se calculó con los suyos.</div>`:""}</div>
+        <div class="chips">${chip(rl,"Logro")}${chip(rc,"CV")}</div></div>
+      <div class="lgrid">
+        <dl class="kv">${kv.map(([k,v])=>`<dt>${k}</dt><dd>${k==="GPS"?v:esc(v)}</dd>`).join("")}</dl>
+        <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+          <div class="mt">
+            <div><div class="l">Plantas/m²</div><div class="v">${f1(R.plm2)}<small>± ${f1(R.desvm2)}</small></div></div>
+            <div><div class="l">Por metro lineal</div><div class="v">${f1(R.prom)}<small>± ${f1(R.desv)} pl</small></div></div>
+            <div><div class="l">CV entre metros</div><div class="v">${fp(R.cv)}</div></div>
+            <div><div class="l">Logro</div><div class="v">${fp(R.logro)}</div></div>
+            <div><div class="l">Mín – máx</div><div class="v">${f0(R.min)}<small>–</small> ${f0(R.max)}<small>pl/m</small></div></div>
+            <div><div class="l">Metros</div><div class="v">${R.n}</div></div>
+          </div>
+          <div class="fig"><div class="t">Plantas/m² en cada metro contado · banda verde: promedio ± 1 desvío${R.dens?" · línea punteada: objetivo":""}</div>${metrosSVG(R)}</div>
+        </div>
+      </div>
+      <div class="fig"><div class="t">Plantas contadas por metro lineal</div>
+        <table class="sur"><tbody>${filas.map((f,j)=>`<tr><td style="color:var(--muted)">M${j*10+1}–${j*10+f.length}</td>${f.map(m=>`<td>${f0(m.v)}</td>`).join("")}${"<td></td>".repeat(10-f.length)}</tr>`).join("")}</tbody></table>
+        ${e.Observaciones?`<div class="obs" style="margin-top:8px"><b>Observaciones:</b> ${esc(e.Observaciones)}</div>`:""}
+      </div>
+    </article>`; }).join("");
+
+  document.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click", ()=>{ const t=document.getElementById(el.dataset.go); t && t.scrollIntoView({behavior:"smooth",block:"start"}); }));
+}
+
 /* ---------- render ---------- */
 function render(){
   const rows = seleccion();
@@ -623,6 +865,7 @@ function render(){
   if(!TODO.length) return;
   const camp = $("#fCamp").value, cult = $("#fCult").value, campo = $("#fCampo").value;
   if(!rows.length){ $("#summary").innerHTML = `<section class="card empty"><h2>Sin evaluaciones</h2><p>No hay evaluaciones para esta selección.</p></section>`; $("#lotes").innerHTML=""; return; }
+  if(rows[0].ml){ renderML(rows); return; }
   const fechas = rows.map(R=>String(R.e.Fecha||"")).filter(Boolean).sort();
   const K = { plha: mean(rows.map(R=>R.plha)), dens: mean(rows.map(R=>R.dens)), logro: mean(rows.map(R=>R.logro)), cv: mean(rows.map(R=>R.cv)),
               dob: mean(rows.map(R=>R.dob)), fal: mean(rows.map(R=>R.fal)), unif: mean(rows.map(R=>R.unif)), media: mean(rows.map(R=>R.media)), desv: mean(rows.map(R=>R.desv)) };
